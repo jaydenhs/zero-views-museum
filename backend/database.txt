@@ -1,0 +1,15 @@
+CREATE TABLE artworks (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    media_type TEXT NOT NULL, -- e.g., 'image', 'video', '3D_model', 'poetry'
+    source TEXT NOT NULL, -- e.g., 'Flickr', 'YouTube', 'Vimeo'
+    creator_name TEXT, -- Name of the original artist
+    url TEXT NOT NULL UNIQUE, -- URL to the artwork
+    title TEXT, -- Title of the artwork
+    description TEXT, -- Optional description
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+# List of art-related prompts
+SEARCH_QUERIES = [
+    "painting", "art", "illustration", "digital art", "oil painting", "watercolor", "contemporary art", "abstract art", "surrealism", "pop art", "minimalist art", "photography"
+]
