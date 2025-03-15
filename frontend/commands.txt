@@ -1,0 +1,10 @@
+Finds Mac local IP:
+ipconfig getifaddr en0
+
+Opens Next.js server on Quest 2:
+adb shell am start -a android.intent.action.VIEW -d "https://192.168.2.25:3000" 
+
+Get access to Chrome console on Brave:
+brave://inspect/#devices
+
+You have to use https to start VR sessions, so --experimental-https is necessary for next dev.
