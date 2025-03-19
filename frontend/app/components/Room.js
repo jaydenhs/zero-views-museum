@@ -1,9 +1,6 @@
 import { useEffect, useState } from "react";
-import { useLoader } from "@react-three/fiber";
-import { TextureLoader } from "three";
 import { createClient } from "@supabase/supabase-js";
-import * as THREE from "three";
-import Photo from "./Photo"; // Your component for displaying images
+import Photo from "./Photo";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,

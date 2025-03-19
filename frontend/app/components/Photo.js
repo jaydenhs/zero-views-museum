@@ -1,6 +1,6 @@
 import { useLoader } from "@react-three/fiber";
 import { TextureLoader } from "three";
-import { Text } from "@react-three/drei"; // Import the Text component from drei
+import { Text } from "@react-three/drei";
 
 export default function Photo({ image, position }) {
   const texture = useLoader(TextureLoader, image.url);
