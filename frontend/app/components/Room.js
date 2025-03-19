@@ -15,15 +15,13 @@ export default function Room() {
 
   useEffect(() => {
     async function fetchImages() {
-      console.log("Fetching images");
-      const { data, error } = await supabase
-        .from("artworks")
-        .select("url, title, creator_name, description, created_at")
-        .eq("source", "Flickr")
-        .eq("media_type", "image")
-        .limit(4);
+      const { data, error } = await supabase.rpc("get_random_artworks", {
+        limit_count: 4,
+        source_filter: "Flickr",
+        media_type_filter: "image",
+      });
 
-      if (!error) {
+      if (!error && images.length === 0) {
         // Fetching image dimensions after getting the metadata
         const imagesWithDimensions = await Promise.all(
           data.map(async (image) => {
