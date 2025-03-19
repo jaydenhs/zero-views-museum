@@ -1,3 +1,10 @@
+Connecting to Quest 2:
+1. Connect with USB
+2. `adb devices` (confirm that it's authorized)
+3. `adb tcpip 5555` (restart in TCP mode port)
+4. *unplug Quest 2 from Mac*
+5. `adb connect 192.168.2.26:5555` (IP address + port)
+
 Finds Mac local IP:
 ipconfig getifaddr en0
 
@@ -8,3 +15,7 @@ Get access to Chrome console on Brave:
 brave://inspect/#devices
 
 You have to use https to start VR sessions, so --experimental-https is necessary for next dev.
+
+
+DEMOS:
+- Roomscale demo: https://immersive-web.github.io/webxr-samples/room-scale.html
