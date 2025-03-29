@@ -1,10 +1,8 @@
 "use client";
 
-import { Environment, PerspectiveCamera } from "@react-three/drei";
+import { PerspectiveCamera } from "@react-three/drei";
 import { XR, createXRStore } from "@react-three/xr";
-
 import { Canvas } from "@react-three/fiber";
-import { useEffect } from "react";
 
 import Room from "./components/Room";
 
@@ -25,8 +23,9 @@ const App = () => {
       >
         <color args={["red"]} attach={"background"}></color>
         <PerspectiveCamera makeDefault position={[0, 1.6, 0]} fov={110} />
-        <XR store={xrStore}></XR>
-        <Room />
+        <XR store={xrStore}>
+          <Room />
+        </XR>
       </Canvas>
       <div
         style={{
