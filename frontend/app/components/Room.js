@@ -50,7 +50,7 @@ export default function Room() {
         <sphereGeometry args={[0.1, 32, 32]} />
         <meshBasicMaterial color="white" />
       </mesh>
-      <pointLight position={[0, 3.5, 0]} intensity={20} />
+      <pointLight position={[0, 3.5, 0]} intensity={40} />
 
       <mesh position={[0, 4, 0]} rotation={[Math.PI / 2, 0, 0]}>
         <planeGeometry args={[4, 4]} />
@@ -71,13 +71,14 @@ export default function Room() {
       ].map(({ position, rotation }, i) => (
         <group key={i} position={position} rotation={rotation}>
           <mesh>
-            <planeGeometry args={[4, 4]} /> // Roughly 10" x 10"
+            <planeGeometry args={[4, 4]} /> // Roughly 10' x 10', so 0.033un =
+            1"
             <meshStandardMaterial color="white" />
           </mesh>
           {images[i] && (
             <Photo
               key={i}
-              position={[0, 0, 0.2]} // Slightly forward to avoid z-fighting
+              position={[0, -0.4, 0]} // Slightly forward to avoid z-fighting
               image={images[i]} // Pass the entire image object
             />
           )}
