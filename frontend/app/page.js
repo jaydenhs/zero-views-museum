@@ -21,7 +21,7 @@ const App = () => {
           height: "100vh",
         }}
       >
-        <color args={["red"]} attach={"background"}></color>
+        <color args={["white"]} attach={"background"}></color>
         <PerspectiveCamera makeDefault position={[0, 1.6, 0]} fov={110} />
         <XR store={xrStore}>
           <Room />
