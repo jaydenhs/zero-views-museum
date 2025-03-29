@@ -64,18 +64,14 @@ export default function Room() {
 
       {/* Define Walls Separately */}
       {[
-        { position: [0, 0, -2], rotationY: [0, 0, 0] }, // Front
-        { position: [0, 0, 2], rotation: [0, Math.PI, 0] }, // Back
-        { position: [-2, 0, 0], rotation: [0, Math.PI / 2, 0] }, // Left
-        { position: [2, 0, 0], rotation: [0, -Math.PI / 2, 0] }, // Right
+        { position: [0, 2, -2], rotationY: [0, 0, 0] }, // Front
+        { position: [0, 2, 2], rotation: [0, Math.PI, 0] }, // Back
+        { position: [-2, 2, 0], rotation: [0, Math.PI / 2, 0] }, // Left
+        { position: [2, 2, 0], rotation: [0, -Math.PI / 2, 0] }, // Right
       ].map(({ position, rotation }, i) => (
-        <group
-          key={i}
-          position={[position[0], 2, position[2]]}
-          rotation={rotation}
-        >
+        <group key={i} position={position} rotation={rotation}>
           <mesh>
-            <planeGeometry args={[4, 4]} />
+            <planeGeometry args={[4, 4]} /> // Roughly 10" x 10"
             <meshStandardMaterial color="white" />
           </mesh>
           {images[i] && (

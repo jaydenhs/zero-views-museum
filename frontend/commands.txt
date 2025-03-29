@@ -2,10 +2,15 @@ Connecting to Quest 2:
 1. Connect with USB
 2. `adb devices` (confirm that it's authorized)
 3. `adb tcpip 5555` (restart in TCP mode port)
-4. *unplug Quest 2 from Mac*
-5. `adb connect 192.168.2.26:5555` (IP address + port)
+4. `adb shell ip route` (Quest IP address is at the end)
+5. *unplug Quest 2 from Mac*
+6. `adb connect {Quest IP}:5555`
 
-Finds Mac local IP:
+If without USB:
+1. Connect with USB
+2. adb reverse tcp:3000 tcp:3000 (connects port 3000 on Mac to port 3000 on device)
+
+Finds Mac local IP (unsure where this is useful):
 ipconfig getifaddr en0
 
 Opens Next.js server on Quest 2:
