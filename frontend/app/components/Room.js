@@ -13,7 +13,7 @@ export default function Room() {
   const [images, setImages] = useState([]);
 
   const fetchImages = async () => {
-    const { data, error } = await supabase.rpc("get_random_artworks", {
+    const { data, error } = await supabase.rpc("get_random_unviewed_artworks", {
       limit_count: 4,
       source_filter: "Flickr",
       media_type_filter: "image",
@@ -32,12 +32,17 @@ export default function Room() {
         )
       );
       setImages(imagesWithDimensions);
+
+      const viewedIds = data.map((image) => image.id);
+      await supabase
+        .from("artworks")
+        .update({ viewed: true })
+        .in("id", viewedIds);
     }
   };
 
   useEffect(() => {
-    console.log("Initial useEffect called again");
-    fetchImages(); // Load initial images
+    fetchImages();
   }, []);
 
   return (
@@ -52,11 +57,13 @@ export default function Room() {
       </mesh>
       <pointLight position={[0, 3.5, 0]} intensity={40} />
 
+      {/* Ceiling */}
       <mesh position={[0, 4, 0]} rotation={[Math.PI / 2, 0, 0]}>
         <planeGeometry args={[4, 4]} />
         <meshStandardMaterial color="white" />
       </mesh>
 
+      {/* Floor */}
       <mesh position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[4, 4]} />
         <meshStandardMaterial color="white" />
