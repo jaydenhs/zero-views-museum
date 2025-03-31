@@ -20,12 +20,37 @@ export default function ThirdPersonView() {
         config: { broadcast: { ack: true, self: true } },
       })
       .on("broadcast", { event: "position" }, (payload) => {
-        console.log("Received position:", payload.payload);
-        setPosition(payload.payload);
+        try {
+          const currentTime = new Date().toLocaleTimeString("en-US", {
+            hour12: false,
+          });
+          console.log(`[${currentTime}] Received position:`, payload.payload);
+          if (
+            Array.isArray(payload.payload) &&
+            payload.payload.length === 3 &&
+            payload.payload.every((num) => typeof num === "number")
+          ) {
+            setPosition(payload.payload);
+          } else {
+            console.error("Invalid position data received:", payload.payload);
+          }
+        } catch (error) {
+          console.error("Error processing position payload:", error);
+        }
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          console.log("Successfully subscribed to vr-position channel");
+        } else {
+          console.error("Failed to subscribe to vr-position channel:", status);
+        }
+      });
 
-    return () => channel.unsubscribe();
+    return () => {
+      channel.unsubscribe().catch((error) => {
+        console.error("Error unsubscribing from vr-position channel:", error);
+      });
+    };
   }, []);
 
   return (

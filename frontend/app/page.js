@@ -99,6 +99,7 @@ export default function VRView() {
 function PositionBroadcaster({ setPosition }) {
   const { camera } = useThree();
   const [channel, setChannel] = useState(null);
+  const [lastBroadcast, setLastBroadcast] = useState(0);
 
   useEffect(() => {
     const newChannel = supabase
@@ -110,11 +111,13 @@ function PositionBroadcaster({ setPosition }) {
     return () => newChannel.unsubscribe();
   }, []);
 
-  useFrame(() => {
-    if (camera && channel) {
+  useFrame(({ clock }) => {
+    const now = clock.getElapsedTime();
+    if (camera && channel && now - lastBroadcast >= 1 / 3) {
       const pos = [camera.position.x, 0, camera.position.z];
       setPosition(pos);
       channel.send({ type: "broadcast", event: "position", payload: pos });
+      setLastBroadcast(now);
     }
   });
 
