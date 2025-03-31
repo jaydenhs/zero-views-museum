@@ -5,6 +5,7 @@ Connecting to Quest 2:
 4. `adb shell ip route` (Quest IP address is at the end)
 5. *unplug Quest 2 from Mac*
 6. `adb connect {Quest IP}:5555`
+- `adb connect 192.168.2.26:5555` at home
 
 If without USB:
 1. Connect with USB
@@ -15,6 +16,10 @@ ipconfig getifaddr en0
 
 Opens Next.js server on Quest 2:
 adb shell am start -a android.intent.action.VIEW -d "https://192.168.2.25:3000" 
+
+Opens Next.js Vercel deployment on Quest 2:
+adb shell am start -a android.intent.action.VIEW -d "https://zero-views-museum.vercel.app/" 
+
 
 Get access to Chrome console on Brave:
 brave://inspect/#devices

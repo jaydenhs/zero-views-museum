@@ -20,6 +20,9 @@ const App = () => {
           width: "100vw",
           height: "100vh",
         }}
+        onCreated={({ camera }) => {
+          console.log("Camera position:", camera.position);
+        }}
       >
         <color args={["white"]} attach={"background"}></color>
         <PerspectiveCamera makeDefault position={[0, 1.6, 0]} fov={110} />

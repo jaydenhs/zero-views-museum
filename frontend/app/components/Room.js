@@ -92,9 +92,36 @@ export default function Room() {
 
 function VRControl({ reloadImages }) {
   const controllerRight = useXRInputSourceState("controller", "right");
+  const controllerLeft = useXRInputSourceState("controller", "left");
+  const headset = useXRInputSourceState("gaze"); // Get headset position & rotation
   const [buttonPressed, setButtonPressed] = useState(false);
+  const [cubePosition, setCubePosition] = useState([0, 2, 0]);
 
   useFrame(() => {
+    // console.log({ headset });
+    console.log(controllerLeft);
+
+    // Track left controller position
+    const buttonPos = controllerLeft?.gamepad?.["a-button"]?.object?.position;
+
+    if (buttonPos) {
+      console.log(buttonPos);
+      // setCubePosition([
+      //   controllerLeft.object.position.x,
+      //   2,
+      //   controllerLeft.object.position.z,
+      // ]);
+    }
+
+    // Track headset rotation (gaze direction)
+    if (headset?.object) {
+      const quaternion = headset.object.quaternion;
+      const gazeDirection = new THREE.Vector3(0, 0, -1); // Default forward direction
+      gazeDirection.applyQuaternion(quaternion); // Rotate direction by headset's rotation
+      console.log("Gaze Direction:", gazeDirection);
+    }
+
+    // Track A-button press
     const isPressed =
       controllerRight?.gamepad?.["a-button"]?.state === "pressed";
 
@@ -106,5 +133,10 @@ function VRControl({ reloadImages }) {
     }
   });
 
-  return null;
+  return (
+    <mesh position={cubePosition}>
+      <boxGeometry args={[0.1, 0.1, 0.1]} />
+      <meshBasicMaterial color="blue" />
+    </mesh>
+  );
 }
