@@ -17,6 +17,7 @@ export default function ThirdPersonView() {
     position: [0, 0, 0],
     rotation: [0, 0, 0],
   });
+  const [fullScreen, setFullScreen] = useState(false);
 
   useEffect(() => {
     const channel = supabase
@@ -38,10 +39,31 @@ export default function ThirdPersonView() {
     return () => channel.unsubscribe();
   }, []);
 
+  const toggleFullscreen = () => {
+    const element = document.documentElement;
+    if (!document.fullscreenElement) {
+      element.requestFullscreen().catch((err) => {
+        console.error(
+          `Error attempting to enable fullscreen mode: ${err.message}`
+        );
+      });
+      setFullScreen(true);
+    } else {
+      document.exitFullscreen().catch((err) => {
+        console.error(
+          `Error attempting to exit fullscreen mode: ${err.message}`
+        );
+      });
+    }
+  };
+
   return (
-    <div style={{ width: "100vw", height: "100vh", background: "white" }}>
+    <div
+      onClick={toggleFullscreen}
+      style={{ width: "100vw", height: "100vh", background: "white" }}
+    >
       <Canvas camera={{ position: [6, 6, 6], fov: 30 }}>
-        <ambientLight intensity={0.9} />
+        <ambientLight intensity={1.2} />
         <group position={[0, -1, 0]}>
           <Room />
           <ViewCone viewState={viewState} />
@@ -79,7 +101,7 @@ function ViewCone({ viewState }) {
       {/* Body - only rotates around Y axis (yaw) */}
       <mesh rotation={[0, yawRad, 0]}>
         <cylinderGeometry args={[0.3, 0.3, 1, 32]} />
-        <meshStandardMaterial color="blue" />
+        <meshStandardMaterial color="#C9CCD3" />
       </mesh>
 
       {/* Head and view cone - full rotation */}
@@ -87,7 +109,7 @@ function ViewCone({ viewState }) {
         {/* Head */}
         <mesh position={[0, 0, 0]}>
           <sphereGeometry args={[0.3, 32, 32]} />
-          <meshStandardMaterial color="blue" />
+          <meshStandardMaterial color="#C9CCD3" />
         </mesh>
 
         {/* View Cone */}
