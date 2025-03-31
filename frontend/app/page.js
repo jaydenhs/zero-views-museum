@@ -7,6 +7,7 @@ import { PerspectiveCamera } from "@react-three/drei";
 import Room from "./components/Room";
 import { VRControls } from "./components/VRControls";
 import { createClient } from "@supabase/supabase-js";
+import * as THREE from "three";
 
 const xrStore = createXRStore({
   originReferenceSpace: "viewer",
@@ -113,10 +114,29 @@ function PositionBroadcaster({ setPosition }) {
 
   useFrame(({ clock }) => {
     const now = clock.getElapsedTime();
-    if (camera && channel && now - lastBroadcast >= 1 / 3) {
-      const pos = [camera.position.x, 0, camera.position.z];
-      setPosition(pos);
-      channel.send({ type: "broadcast", event: "position", payload: pos });
+    if (camera && channel && now - lastBroadcast >= 1 / 10) {
+      // 10 updates/sec
+      // Get camera orientation as Euler angles
+      const euler = new THREE.Euler().setFromQuaternion(
+        camera.quaternion,
+        "YXZ" // VR typically uses Y-X-Z rotation order
+      );
+
+      const payload = {
+        position: [camera.position.x, 0, camera.position.z],
+        rotation: [
+          THREE.MathUtils.radToDeg(euler.x), // Pitch
+          THREE.MathUtils.radToDeg(euler.y), // Yaw
+          THREE.MathUtils.radToDeg(euler.z), // Roll
+        ],
+      };
+
+      setPosition(payload.position);
+      channel.send({
+        type: "broadcast",
+        event: "viewstate",
+        payload,
+      });
       setLastBroadcast(now);
     }
   });
