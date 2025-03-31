@@ -1,55 +1,9 @@
-import { useEffect, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
-import { useXRInputSourceState } from "@react-three/xr";
 import { useFrame } from "@react-three/fiber";
 import Photo from "./Photo";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_KEY
-);
-
-export default function Room() {
-  const [images, setImages] = useState([]);
-
-  const fetchImages = async () => {
-    const { data, error } = await supabase.rpc("get_random_unviewed_artworks", {
-      limit_count: 4,
-      source_filter: "Flickr",
-      media_type_filter: "image",
-    });
-
-    if (!error) {
-      const imagesWithDimensions = await Promise.all(
-        data.map(
-          (image) =>
-            new Promise((resolve) => {
-              const img = new Image();
-              img.src = image.url;
-              img.onload = () =>
-                resolve({ ...image, width: img.width, height: img.height });
-            })
-        )
-      );
-      setImages(imagesWithDimensions);
-
-      const viewedIds = data.map((image) => image.id);
-      await supabase
-        .from("artworks")
-        .update({ viewed: true })
-        .in("id", viewedIds);
-    }
-  };
-
-  useEffect(() => {
-    fetchImages();
-  }, []);
-
+export default function Room({ images, onReload }) {
   return (
     <group>
-      {/* Listen for A-button presses */}
-      <VRControl reloadImages={() => fetchImages()} />
-
       {/* Bright Light on Ceiling */}
       <mesh position={[0, 3.5, 0]}>
         <sphereGeometry args={[0.1, 32, 32]} />
@@ -81,29 +35,16 @@ export default function Room() {
             <planeGeometry args={[4, 4]} />
             <meshStandardMaterial color="white" />
           </mesh>
-          {images[i] && (
-            <Photo key={i} position={[0, -0.4, 0]} image={images[i]} />
+          {images?.[i] ? (
+            <Photo position={[0, -0.4, 0]} image={images[i]} />
+          ) : (
+            <mesh position={[0, -0.4, 0]}>
+              <boxGeometry args={[2.7, 1.5, 0.1]} />
+              <meshStandardMaterial color="white" />
+            </mesh>
           )}
         </group>
       ))}
     </group>
   );
-}
-
-function VRControl({ reloadImages }) {
-  const controllerRight = useXRInputSourceState("controller", "right");
-  const [buttonPressed, setButtonPressed] = useState(false);
-
-  useFrame(() => {
-    // Track A-button press
-    const isPressed =
-      controllerRight?.gamepad?.["a-button"]?.state === "pressed";
-
-    if (isPressed && !buttonPressed) {
-      reloadImages();
-      setButtonPressed(true);
-    } else if (!isPressed && buttonPressed) {
-      setButtonPressed(false);
-    }
-  });
 }

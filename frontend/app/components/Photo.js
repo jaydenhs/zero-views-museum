@@ -3,9 +3,18 @@ import { TextureLoader } from "three";
 import { Text } from "@react-three/drei";
 
 export default function Photo({ image, position }) {
-  const texture = useLoader(TextureLoader, image.url);
+  const texture = useLoader(TextureLoader, image?.url || null);
 
-  // Aspect ratio calculation
+  if (!image) {
+    return (
+      <mesh position={position}>
+        <boxGeometry args={[2.7, 1.5, 0.1]} />
+        <meshStandardMaterial color="white" />
+      </mesh>
+    );
+  }
+
+  // Existing image rendering logic
   const aspect = image.width / image.height;
   const resolutionScale = Math.min(image.width, image.height) / 500;
   const scaledW = Math.max(1.5, Math.min(2.7, 2 * resolutionScale));
@@ -26,12 +35,10 @@ export default function Photo({ image, position }) {
 
   return (
     <group position={position}>
-      {/* Display Image */}
       <mesh>
         <boxGeometry args={[scaledW, scaledH, 0.1]} />
         <meshStandardMaterial map={texture} />
       </mesh>
-
       <group position={[scaledW / 2 + frameW + plateW / 2 + 0.2, -0.2, 0]}>
         <mesh>
           <boxGeometry args={[plateW, plateH, 0.01]} />
