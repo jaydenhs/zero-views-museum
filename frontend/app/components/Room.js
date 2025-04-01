@@ -1,7 +1,12 @@
-import { useFrame } from "@react-three/fiber";
+import { useLoader } from "@react-three/fiber";
+import * as THREE from "three";
 import Photo from "./Photo";
 
-export default function Room({ images, onReload }) {
+export default function Room({ images }) {
+  const floorTexture = useLoader(THREE.TextureLoader, "/wood-floor.jpg");
+  floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping;
+  floorTexture.repeat.set(4, 4);
+
   return (
     <group>
       {/* Bright Light on Ceiling */}
@@ -20,7 +25,7 @@ export default function Room({ images, onReload }) {
       {/* Floor */}
       <mesh position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[4, 4]} />
-        <meshStandardMaterial color="white" />
+        <meshStandardMaterial map={floorTexture} />
       </mesh>
 
       {/* Walls */}
