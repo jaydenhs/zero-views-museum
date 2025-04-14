@@ -20,9 +20,9 @@ In an `.env` file, you need to define the following environment variables:
 - `SUPABASE_URL` - The URL of your Supabase instance.
 - `SUPABASE_KEY` - The API key for your Supabase instance.
 
-Then, create a virtual Python environment, install the Python requirements via `requirements.txt`, and activate the environment.
+Then, create a virtual Python environment, install the Python requirements via `requirements.txt`, and activate the environment. [Instructions for installing Python packages in a virtual environment are available here.](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/)
 
-To run the Flickr API querying, run `python flickr.py`
+To run the Flickr API querying, run `python flickr.py`. `SEARCH_QUERIES` can be modified based on artwork categories of interest.
 
 ### Frontend (`/frontend`)
 
@@ -33,4 +33,8 @@ In an `.env` file, you need to define the following environment variables:
 
 After installing Node dependencies with `npm i`, run the Next.js server with `npm run dev`.
 
-The VR museum interface is available at root `/`, and the audience view is available at `/third-person`.
+The VR museum interface is available at the root `/`, and the audience view at `/third-person`.
+
+For development on localhost, the [Immersive Web Emulation Runtime (IWER)](https://developers.meta.com/horizon/blog/immersive-web-emulation-runtime-iwer-webxr-meta-quest-developer/) is available to emulate VR without requiring a headset.
+
+If accessing a deployed version of the frontend such as [our existing deployment](https://zero-views-museum.vercel.app/), a VR headset is necessary to interact with the museum.
