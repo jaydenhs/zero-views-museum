@@ -1,1 +1,36 @@
-# zero-views-museum
+# Zero Views Museum
+
+![Experience](readme/Experience.png)
+
+Our consumption of art is increasingly shaped by algorithms. These systems equate virality with value; the more views an artwork has, the better it must be and the more it deserves to be shown.
+
+_Zero Views Museum_ acts as a counterfunctional algorithm by only exhibiting artworks with zero views. Once experienced, they are erased from our database — making you both the first and potentially last person to see them.
+
+This encounter invites reflection: Are algorithms good arbiters of artistic worth? What unseen works have already been lost? And does our perception of art change when we know we can never see it again?
+
+## Cloning and Running
+
+![Implementation](readme/Implementation.png)
+
+### Data (`/data`)
+
+In an `.env` file, you need to define the following environment variables:
+
+- `FLICKR_API_KEY` - Your Flickr API key.
+- `SUPABASE_URL` - The URL of your Supabase instance.
+- `SUPABASE_KEY` - The API key for your Supabase instance.
+
+Then, create a virtual Python environment, install the Python requirements via `requirements.txt`, and activate the environment.
+
+To run the Flickr API querying, run `python flickr.py`
+
+### Frontend (`/frontend`)
+
+In an `.env` file, you need to define the following environment variables:
+
+- `NEXT_PUBLIC_SUPABASE_URL` - The URL of your Supabase instance.
+- `NEXT_PUBLIC_SUPABASE_KEY` - The API key for your Supabase instance.
+
+After installing Node dependencies with `npm i`, run the Next.js server with `npm run dev`.
+
+The VR museum interface is available at root `/`, and the audience view is available at `/third-person`.
