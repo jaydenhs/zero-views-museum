@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { XR, createXRStore } from "@react-three/xr";
 import { PerspectiveCamera } from "@react-three/drei";
@@ -18,9 +18,22 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_KEY
 );
 
+const ESP32_WS_URL = "wss://localhost:3001/ws";
+  
 export default function VRView() {
   const [images, setImages] = useState([]);
   const [cameraPosition, setCameraPosition] = useState([0, 2, 0]);
+  const ws = useRef(null);
+
+  useEffect(() => {
+    ws.current = new window.WebSocket(ESP32_WS_URL);
+    ws.current.onopen = () => console.log("WebSocket connected to ESP32");
+    ws.current.onclose = () => console.log("WebSocket disconnected from ESP32");
+    ws.current.onerror = (e) => console.error("WebSocket error", e);
+    return () => {
+      if (ws.current) ws.current.close();
+    };
+  }, []);
 
   const fetchImages = async () => {
     const { data, error } = await supabase.rpc("get_random_unviewed_artworks", {
@@ -92,6 +105,44 @@ export default function VRView() {
         >
           Enter VR
         </button>
+        <div style={{ position: "fixed", bottom: "20px", right: "20px", display: "flex", flexDirection: "row", gap: "1rem", alignItems: "center" }}>
+          <button
+            onClick={() => {
+              if (ws.current && ws.current.readyState === 1) ws.current.send("red");
+            }}
+            style={{
+              fontSize: "20px",
+              background: "red",
+              padding: "1rem",
+            }}
+          >
+            Red
+          </button>
+          <button
+            onClick={() => {
+              if (ws.current && ws.current.readyState === 1) ws.current.send("blue");
+            }}
+            style={{
+              fontSize: "20px",
+              background: "blue",
+              padding: "1rem",
+            }}
+          >
+            Blue
+          </button>
+          <button
+            onClick={() => {
+              if (ws.current && ws.current.readyState === 1) ws.current.send("purple");
+            }}
+            style={{
+              fontSize: "20px",
+              background: "purple",
+              padding: "1rem",
+            }}
+          >
+            Purple
+          </button>
+        </div>
       </div>
     </>
   );
