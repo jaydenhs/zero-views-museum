@@ -108,39 +108,35 @@ export default function VRView() {
         <div style={{ position: "fixed", bottom: "20px", right: "20px", display: "flex", flexDirection: "row", gap: "1rem", alignItems: "center" }}>
           <button
             onClick={() => {
-              if (ws.current && ws.current.readyState === 1) ws.current.send("red");
+              if (ws.current && ws.current.readyState === 1) {
+                ws.current.send(
+                  JSON.stringify({ target: "esp1", devicePayload: { action: "pulse" } })
+                );
+              }
             }}
             style={{
               fontSize: "20px",
-              background: "red",
+              background: "green",
               padding: "1rem",
             }}
           >
-            Red
+            LED Board 1
           </button>
           <button
             onClick={() => {
-              if (ws.current && ws.current.readyState === 1) ws.current.send("blue");
+              if (ws.current && ws.current.readyState === 1) {
+                ws.current.send(
+                  JSON.stringify({ target: "esp2", devicePayload: { action: "pulse" } })
+                );
+              }
             }}
             style={{
               fontSize: "20px",
-              background: "blue",
+              background: "green",
               padding: "1rem",
             }}
           >
-            Blue
-          </button>
-          <button
-            onClick={() => {
-              if (ws.current && ws.current.readyState === 1) ws.current.send("purple");
-            }}
-            style={{
-              fontSize: "20px",
-              background: "purple",
-              padding: "1rem",
-            }}
-          >
-            Purple
+            LED Board 2
           </button>
         </div>
       </div>
