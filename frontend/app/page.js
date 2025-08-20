@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { XR, createXRStore } from "@react-three/xr";
-import { PerspectiveCamera, OrbitControls } from "@react-three/drei";
+import { PerspectiveCamera } from "@react-three/drei";
 import Room from "./components/Room";
 import { VRControls } from "./components/VRControls";
 import { createClient } from "@supabase/supabase-js";
@@ -22,7 +22,6 @@ const ESP32_WS_URL = "wss://localhost:3001/ws";
 
 export default function VRView() {
   const [images, setImages] = useState([]);
-  const [cameraPosition, setCameraPosition] = useState([0, 2, 0]);
   const ws = useRef(null);
 
   useEffect(() => {
@@ -75,18 +74,10 @@ export default function VRView() {
       <Canvas style={{ position: "fixed", width: "100vw", height: "100vh" }}>
         <color args={["white"]} attach="background" />
         <PerspectiveCamera makeDefault position={[0, 1.6, 0]} fov={110} />
-        <OrbitControls
-          target={[0, 1.6, 0]}
-          enablePan={false}
-          minDistance={2}
-          maxDistance={10}
-          minPolarAngle={Math.PI / 6}
-          maxPolarAngle={Math.PI - Math.PI / 6}
-        />
         <XR store={xrStore}>
           <Room images={images} />
           <VRControls onReload={fetchImages} />
-          <PositionBroadcaster setPosition={setCameraPosition} />
+          <GazeRaycaster ws={ws} />
         </XR>
       </Canvas>
       <div
@@ -115,105 +106,63 @@ export default function VRView() {
         >
           Enter VR
         </button>
-        <div
-          style={{
-            position: "fixed",
-            bottom: "20px",
-            right: "20px",
-            display: "flex",
-            flexDirection: "row",
-            gap: "1rem",
-            alignItems: "center",
-          }}
-        >
-          <button
-            onClick={() => {
-              console.log(
-                "Button clicked! WebSocket state:",
-                ws.current?.readyState
-              );
-              if (ws.current && ws.current.readyState === 1) {
-                const message = { target: "esp1", action: "pulse" };
-                console.log("Sending message:", message);
-                ws.current.send(JSON.stringify(message));
-              } else {
-                console.log(
-                  "WebSocket not ready. State:",
-                  ws.current?.readyState
-                );
-              }
-            }}
-            style={{
-              fontSize: "20px",
-              background: "green",
-              padding: "1rem",
-            }}
-          >
-            LED Board 1
-          </button>
-          <button
-            onClick={() => {
-              if (ws.current && ws.current.readyState === 1) {
-                ws.current.send(
-                  JSON.stringify({ target: "esp2", action: "pulse" })
-                );
-              }
-            }}
-            style={{
-              fontSize: "20px",
-              background: "green",
-              padding: "1rem",
-            }}
-          >
-            LED Board 2
-          </button>
-        </div>
       </div>
     </>
   );
 }
 
-function PositionBroadcaster({ setPosition }) {
-  const { camera } = useThree();
-  const [channel, setChannel] = useState(null);
-  const [lastBroadcast, setLastBroadcast] = useState(0);
-
-  useEffect(() => {
-    const newChannel = supabase
-      .channel("vr-position", {
-        config: { broadcast: { ack: true, self: true } },
-      })
-      .subscribe();
-    setChannel(newChannel);
-    return () => newChannel.unsubscribe();
-  }, []);
+function GazeRaycaster({ ws }) {
+  const { camera, scene } = useThree();
+  const raycasterRef = useRef(new THREE.Raycaster());
+  const lastCanvasRef = useRef(null);
+  const lastSentAtRef = useRef(0);
 
   useFrame(({ clock }) => {
-    const now = clock.getElapsedTime();
-    if (camera && channel && now - lastBroadcast >= 1 / 10) {
-      // 10 updates/sec
-      // Get camera orientation as Euler angles
-      const euler = new THREE.Euler().setFromQuaternion(
-        camera.quaternion,
-        "YXZ" // VR typically uses Y-X-Z rotation order
-      );
+    if (!camera || !scene) return;
 
-      const payload = {
-        position: [camera.position.x, 0, camera.position.z],
-        rotation: [
-          THREE.MathUtils.radToDeg(euler.x), // Pitch
-          THREE.MathUtils.radToDeg(euler.y), // Yaw
-          THREE.MathUtils.radToDeg(euler.z), // Roll
-        ],
-      };
+    const dir = new THREE.Vector3();
+    camera.getWorldDirection(dir);
 
-      setPosition(payload.position);
-      channel.send({
-        type: "broadcast",
-        event: "viewstate",
-        payload,
-      });
-      setLastBroadcast(now);
+    const raycaster = raycasterRef.current;
+    raycaster.set(camera.position.clone(), dir);
+
+    const intersects = raycaster.intersectObjects(scene.children, true);
+
+    let canvas = null;
+    for (const it of intersects) {
+      let obj = it.object;
+      while (obj) {
+        if (obj.userData && obj.userData.canvas) {
+          canvas = obj.userData.canvas;
+          break;
+        }
+        obj = obj.parent;
+      }
+      if (canvas) break;
+    }
+
+    if (canvas && canvas !== lastCanvasRef.current) {
+      lastCanvasRef.current = canvas;
+      // Send "looked at" command immediately when starting to look at a canvas
+      const target = canvas;
+      if (ws.current && ws.current.readyState === 1 && target) {
+        ws.current.send(
+          JSON.stringify({ target, action: "looked_at", canvas })
+        );
+      }
+    } else if (!canvas && lastCanvasRef.current) {
+      // Send "not looked at" command when looking away from a canvas
+      const target = lastCanvasRef.current;
+      if (ws.current && ws.current.readyState === 1 && target) {
+        ws.current.send(
+          JSON.stringify({
+            target,
+            action: "not_looked_at",
+            canvas: lastCanvasRef.current,
+          })
+        );
+      }
+      lastCanvasRef.current = null;
     }
   });
 

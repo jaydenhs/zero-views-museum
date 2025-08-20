@@ -17,10 +17,10 @@ const options = {
 const server = https.createServer(options, app);
 
 const DEVICE_URLS = {
-  esp1: "ws://192.168.2.105:81",
-  // esp2: "ws://10.120.5.57:81",
-  //   esp3: "ws://[IP]:81",
-  //   esp4: "ws://[IP]:81",
+  left: "ws://192.168.2.105:81",
+  centerLeft: "ws://192.168.2.106:81",
+  centerRight: "ws://192.168.2.107:81",
+  right: "ws://192.168.2.108:81",
 };
 
 const deviceSockets = new Map();

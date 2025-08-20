@@ -43,8 +43,20 @@ export default function Room({ images }) {
           <meshStandardMaterial color="white" />
         </mesh>
         {/* Two photos on the front wall */}
-        {images?.[1] && <Photo position={[-2, -0.4, 0]} image={images[1]} />}
-        {images?.[2] && <Photo position={[2, -0.4, 0]} image={images[2]} />}
+        {images?.[1] && (
+          <Photo
+            position={[-1.5, -0.4, 0]}
+            image={images[1]}
+            canvas="center-left"
+          />
+        )}
+        {images?.[2] && (
+          <Photo
+            position={[1.5, -0.4, 0]}
+            image={images[2]}
+            canvas="center-right"
+          />
+        )}
       </group>
 
       {/* Back Wall (long) - no photos */}
@@ -67,7 +79,9 @@ export default function Room({ images }) {
           <planeGeometry args={[roomDepth, roomHeight]} />
           <meshStandardMaterial color="white" />
         </mesh>
-        {images?.[0] && <Photo position={[0, -0.4, 0]} image={images[0]} />}
+        {images?.[0] && (
+          <Photo position={[0, -0.4, 0]} image={images[0]} canvas="left" />
+        )}
       </group>
 
       {/* Right Wall (short) */}
@@ -79,7 +93,9 @@ export default function Room({ images }) {
           <planeGeometry args={[roomDepth, roomHeight]} />
           <meshStandardMaterial color="white" />
         </mesh>
-        {images?.[3] && <Photo position={[0, -0.4, 0]} image={images[3]} />}
+        {images?.[3] && (
+          <Photo position={[0, -0.4, 0]} image={images[3]} canvas="right" />
+        )}
       </group>
     </group>
   );

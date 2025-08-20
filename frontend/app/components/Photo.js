@@ -2,23 +2,32 @@ import { useLoader } from "@react-three/fiber";
 import { TextureLoader } from "three";
 import { Text } from "@react-three/drei";
 
-export default function Photo({ image, position }) {
+export default function Photo({ image, position, canvas }) {
   const texture = useLoader(TextureLoader, image?.url || null);
 
   if (!image) {
     return (
-      <mesh position={position}>
-        <boxGeometry args={[2.7, 1.5, 0.1]} />
-        <meshStandardMaterial color="white" />
-      </mesh>
+      <group position={position} userData={{ canvas }} name={canvas || "photo"}>
+        <mesh>
+          <boxGeometry args={[2.7, 1.5, 0.1]} />
+          <meshStandardMaterial color="white" />
+        </mesh>
+      </group>
     );
   }
 
-  // Existing image rendering logic
+  // Calculate dimensions preserving aspect ratio with maximums
   const aspect = image.width / image.height;
-  const resolutionScale = Math.min(image.width, image.height) / 500;
-  const scaledW = Math.max(1.5, Math.min(2.7, 2 * resolutionScale));
-  const scaledH = scaledW / aspect;
+  let photoW, photoH;
+  if (aspect > 1) {
+    // Landscape image - width is the limiting factor
+    photoW = 2;
+    photoH = 2 / aspect;
+  } else {
+    // Portrait image - height is the limiting factor
+    photoH = 2.5;
+    photoW = 2.5 * aspect;
+  }
 
   const frameW = 0.05;
   const fontSize = 0.015;
@@ -34,12 +43,14 @@ export default function Photo({ image, position }) {
   const createdAtYear = new Date(image.created_at).getFullYear();
 
   return (
-    <group position={position}>
+    <group position={position} userData={{ canvas }} name={canvas || "photo"}>
+      {/* Photo */}
       <mesh>
-        <boxGeometry args={[scaledW, scaledH, 0.1]} />
+        <boxGeometry args={[photoW, photoH, 0.1]} />
         <meshStandardMaterial map={texture} />
       </mesh>
-      <group position={[scaledW / 2 + frameW + plateW / 2 + 0.2, -0.2, 0]}>
+      {/* Plaque */}
+      <group position={[photoW / 2 + frameW + plateW / 2 + 0.2, -0.2, 0]}>
         <mesh>
           <boxGeometry args={[plateW, plateH, 0.01]} />
           <meshStandardMaterial color="#E5E5E5" />
