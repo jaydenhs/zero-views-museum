@@ -8,6 +8,8 @@ _Zero Views Museum_ acts as a counterfunctional algorithm by only exhibiting art
 
 This encounter invites reflection: Are algorithms good arbiters of artistic worth? What unseen works have already been lost? And does our perception of art change when we know we can never see it again?
 
+[Click here for a demo video of the experience.](https://www.youtube.com/watch?v=OyhZxtvqi-U)
+
 ## Cloning and Running
 
 ![Implementation](readme/Implementation.png)
