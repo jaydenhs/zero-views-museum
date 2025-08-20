@@ -2,13 +2,13 @@
 #include <WiFi.h>
 #include <WebSocketsServer.h>
 
+// Need to include a wifi-config.h in /include that defines the ssid and password
+#include "wifi-config.h"
+
 #define RED_PIN   21
 #define GREEN_PIN 22
 #define BLUE_PIN  23
 #define ONBOARD_LED_PIN 2
-
-const char* ssid = "wifi name";
-const char* password = "wifi password";
 
 WebSocketsServer webSocket = WebSocketsServer(81);
 
@@ -35,9 +35,13 @@ void webSocketEvent(uint8_t client, WStype_t type, uint8_t * payload, size_t len
 
 	// JSON payloads
     if (length > 0 && payload[0] == '{') {
-      if (msg.indexOf("\"action\"") != -1) {
-        if (msg.indexOf("\"pulse\"") != -1) { pulseOnboard(); return; }
+      // Look for {"action":"pulse"} pattern
+      if (msg.indexOf("\"action\"") != -1 && msg.indexOf("\"pulse\"") != -1) {
+        pulseOnboard(); 
+        Serial.println("Pulse command received!");
+        return; 
       }
+      Serial.println("JSON received but no valid action: " + msg);
       return;
     }
 
@@ -56,9 +60,11 @@ void webSocketEvent(uint8_t client, WStype_t type, uint8_t * payload, size_t len
 void setup() {
   Serial.begin(115200);
   WiFi.begin(ssid, password);
+  Serial.print("Connecting to WiFi");
   while (WiFi.status() != WL_CONNECTED) {
     delay(500); Serial.print(".");
   }
+  Serial.println("");
   Serial.println("WiFi connected");
   Serial.println(WiFi.localIP());
 
