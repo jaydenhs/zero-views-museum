@@ -7,6 +7,11 @@ export default function Room({ images }) {
   floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping;
   floorTexture.repeat.set(4, 4);
 
+  // Room dimensions: width (x) = 8, depth (z) = 4, height (y) = 4
+  const roomWidth = 8;
+  const roomDepth = 4;
+  const roomHeight = 4;
+
   return (
     <group>
       {/* Bright Light on Ceiling */}
@@ -17,39 +22,65 @@ export default function Room({ images }) {
       <pointLight position={[0, 3.5, 0]} intensity={40} />
 
       {/* Ceiling */}
-      <mesh position={[0, 4, 0]} rotation={[Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[4, 4]} />
+      <mesh position={[0, roomHeight, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[roomWidth, roomDepth]} />
         <meshStandardMaterial color="white" />
       </mesh>
 
       {/* Floor */}
       <mesh position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[4, 4]} />
+        <planeGeometry args={[roomWidth, roomDepth]} />
         <meshStandardMaterial map={floorTexture} />
       </mesh>
 
-      {/* Walls */}
-      {[
-        { position: [0, 2, -2], rotation: [0, 0, 0] }, // Front
-        { position: [0, 2, 2], rotation: [0, Math.PI, 0] }, // Back
-        { position: [-2, 2, 0], rotation: [0, Math.PI / 2, 0] }, // Left
-        { position: [2, 2, 0], rotation: [0, -Math.PI / 2, 0] }, // Right
-      ].map(({ position, rotation }, i) => (
-        <group key={i} position={position} rotation={rotation}>
-          <mesh>
-            <planeGeometry args={[4, 4]} />
-            <meshStandardMaterial color="white" />
-          </mesh>
-          {images?.[i] ? (
-            <Photo position={[0, -0.4, 0]} image={images[i]} />
-          ) : (
-            <mesh position={[0, -0.4, 0]}>
-              <boxGeometry args={[2.7, 1.5, 0.1]} />
-              <meshStandardMaterial color="white" />
-            </mesh>
-          )}
-        </group>
-      ))}
+      {/* Front Wall (long) */}
+      <group
+        position={[0, roomHeight / 2, -roomDepth / 2]}
+        rotation={[0, 0, 0]}
+      >
+        <mesh>
+          <planeGeometry args={[roomWidth, roomHeight]} />
+          <meshStandardMaterial color="white" />
+        </mesh>
+        {/* Two photos on the front wall */}
+        {images?.[1] && <Photo position={[-2, -0.4, 0]} image={images[1]} />}
+        {images?.[2] && <Photo position={[2, -0.4, 0]} image={images[2]} />}
+      </group>
+
+      {/* Back Wall (long) - no photos */}
+      <group
+        position={[0, roomHeight / 2, roomDepth / 2]}
+        rotation={[0, Math.PI, 0]}
+      >
+        <mesh>
+          <planeGeometry args={[roomWidth, roomHeight]} />
+          <meshStandardMaterial color="white" />
+        </mesh>
+      </group>
+
+      {/* Left Wall (short) */}
+      <group
+        position={[-roomWidth / 2, roomHeight / 2, 0]}
+        rotation={[0, Math.PI / 2, 0]}
+      >
+        <mesh>
+          <planeGeometry args={[roomDepth, roomHeight]} />
+          <meshStandardMaterial color="white" />
+        </mesh>
+        {images?.[0] && <Photo position={[0, -0.4, 0]} image={images[0]} />}
+      </group>
+
+      {/* Right Wall (short) */}
+      <group
+        position={[roomWidth / 2, roomHeight / 2, 0]}
+        rotation={[0, -Math.PI / 2, 0]}
+      >
+        <mesh>
+          <planeGeometry args={[roomDepth, roomHeight]} />
+          <meshStandardMaterial color="white" />
+        </mesh>
+        {images?.[3] && <Photo position={[0, -0.4, 0]} image={images[3]} />}
+      </group>
     </group>
   );
 }

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { XR, createXRStore } from "@react-three/xr";
-import { PerspectiveCamera } from "@react-three/drei";
+import { PerspectiveCamera, OrbitControls } from "@react-three/drei";
 import Room from "./components/Room";
 import { VRControls } from "./components/VRControls";
 import { createClient } from "@supabase/supabase-js";
@@ -19,7 +19,7 @@ const supabase = createClient(
 );
 
 const ESP32_WS_URL = "wss://localhost:3001/ws";
-  
+
 export default function VRView() {
   const [images, setImages] = useState([]);
   const [cameraPosition, setCameraPosition] = useState([0, 2, 0]);
@@ -30,6 +30,8 @@ export default function VRView() {
     ws.current.onopen = () => console.log("WebSocket connected to ESP32");
     ws.current.onclose = () => console.log("WebSocket disconnected from ESP32");
     ws.current.onerror = (e) => console.error("WebSocket error", e);
+    ws.current.onmessage = (event) =>
+      console.log("Received message:", event.data);
     return () => {
       if (ws.current) ws.current.close();
     };
@@ -73,6 +75,14 @@ export default function VRView() {
       <Canvas style={{ position: "fixed", width: "100vw", height: "100vh" }}>
         <color args={["white"]} attach="background" />
         <PerspectiveCamera makeDefault position={[0, 1.6, 0]} fov={110} />
+        <OrbitControls
+          target={[0, 1.6, 0]}
+          enablePan={false}
+          minDistance={2}
+          maxDistance={10}
+          minPolarAngle={Math.PI / 6}
+          maxPolarAngle={Math.PI - Math.PI / 6}
+        />
         <XR store={xrStore}>
           <Room images={images} />
           <VRControls onReload={fetchImages} />
@@ -105,12 +115,31 @@ export default function VRView() {
         >
           Enter VR
         </button>
-        <div style={{ position: "fixed", bottom: "20px", right: "20px", display: "flex", flexDirection: "row", gap: "1rem", alignItems: "center" }}>
+        <div
+          style={{
+            position: "fixed",
+            bottom: "20px",
+            right: "20px",
+            display: "flex",
+            flexDirection: "row",
+            gap: "1rem",
+            alignItems: "center",
+          }}
+        >
           <button
             onClick={() => {
+              console.log(
+                "Button clicked! WebSocket state:",
+                ws.current?.readyState
+              );
               if (ws.current && ws.current.readyState === 1) {
-                ws.current.send(
-                  JSON.stringify({ target: "esp1", devicePayload: { action: "pulse" } })
+                const message = { target: "esp1", action: "pulse" };
+                console.log("Sending message:", message);
+                ws.current.send(JSON.stringify(message));
+              } else {
+                console.log(
+                  "WebSocket not ready. State:",
+                  ws.current?.readyState
                 );
               }
             }}
@@ -126,7 +155,7 @@ export default function VRView() {
             onClick={() => {
               if (ws.current && ws.current.readyState === 1) {
                 ws.current.send(
-                  JSON.stringify({ target: "esp2", devicePayload: { action: "pulse" } })
+                  JSON.stringify({ target: "esp2", action: "pulse" })
                 );
               }
             }}
