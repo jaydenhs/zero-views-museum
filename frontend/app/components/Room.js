@@ -12,14 +12,27 @@ export default function Room({ images }) {
   const roomDepth = 4;
   const roomHeight = 4;
 
+  const lightsX = [-2, 0, 2];
+
   return (
     <group>
-      {/* Bright Light on Ceiling */}
-      <mesh position={[0, 3.5, 0]}>
-        <sphereGeometry args={[0.1, 32, 32]} />
-        <meshBasicMaterial color="white" />
-      </mesh>
-      <pointLight position={[0, 3.5, 0]} intensity={40} />
+      {/* Bright Lights on Ceiling */}
+      {lightsX.map((x, i) => (
+        <group key={i} position={[x, 3, 0]}>
+          {/* Glowing sphere to look like it's emitting light */}
+          <mesh>
+            <sphereGeometry args={[0.1, 32, 32]} />
+            <meshStandardMaterial
+              color="white"
+              emissive="white"
+              emissiveIntensity={2}
+              metalness={0.2}
+              roughness={0.3}
+            />
+          </mesh>
+          <pointLight intensity={25} />
+        </group>
+      ))}
 
       {/* Ceiling */}
       <mesh position={[0, roomHeight, 0]} rotation={[Math.PI / 2, 0, 0]}>
@@ -47,14 +60,14 @@ export default function Room({ images }) {
           <Photo
             position={[-1.5, -0.4, 0]}
             image={images[1]}
-            canvas="center-left"
+            canvas="centerLeft"
           />
         )}
         {images?.[2] && (
           <Photo
             position={[1.5, -0.4, 0]}
             image={images[2]}
-            canvas="center-right"
+            canvas="centerRight"
           />
         )}
       </group>

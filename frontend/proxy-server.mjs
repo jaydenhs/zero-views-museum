@@ -33,11 +33,7 @@ function connectToDevice(name, url) {
       deviceSockets.set(name, ws);
     });
     ws.on("message", (data) => {
-      broadcastToClients({
-        type: "deviceMessage",
-        from: name,
-        data: data.toString(),
-      });
+      console.log(`Received from device ${name}:`, data.toString());
     });
     ws.on("close", () => {
       console.log(`Disconnected from ${name}, retrying in 2s...`);
@@ -49,15 +45,6 @@ function connectToDevice(name, url) {
     });
   };
   connect();
-}
-
-const clients = new Set();
-
-function broadcastToClients(message) {
-  const payload = JSON.stringify(message);
-  for (const client of clients) {
-    if (client.readyState === 1) client.send(payload);
-  }
 }
 
 function routeClientCommand(command) {
@@ -76,12 +63,25 @@ function routeClientCommand(command) {
 const wss = new WebSocketServer({ server, path: "/ws" });
 
 wss.on("connection", (ws) => {
-  clients.add(ws);
+  console.log(`New client connected`);
+
   ws.on("message", (data) => {
-    const msg = JSON.parse(data.toString());
-    routeClientCommand(msg);
+    try {
+      const msg = JSON.parse(data.toString());
+      console.log(`Received from client:`, msg);
+      routeClientCommand(msg);
+    } catch (error) {
+      console.error(`Failed to parse client message:`, error.message);
+    }
   });
-  ws.on("close", () => clients.delete(ws));
+
+  ws.on("close", () => {
+    console.log(`Client disconnected`);
+  });
+
+  ws.on("error", (error) => {
+    console.error(`Client WebSocket error:`, error.message);
+  });
 });
 
 for (const [name, url] of Object.entries(DEVICE_URLS)) {
