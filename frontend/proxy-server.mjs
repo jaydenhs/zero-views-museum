@@ -17,10 +17,10 @@ const options = {
 const server = https.createServer(options, app);
 
 const DEVICE_URLS = {
-  left: "ws://192.168.2.105:81",
+  // left: "ws://192.168.2.105:81",
   centerLeft: "ws://192.168.2.106:81",
   centerRight: "ws://192.168.2.107:81",
-  right: "ws://192.168.2.108:81",
+  // right: "ws://192.168.2.108:81",
 };
 
 const deviceSockets = new Map();
@@ -89,5 +89,5 @@ for (const [name, url] of Object.entries(DEVICE_URLS)) {
 }
 
 server.listen(3001, () => {
-  console.log("🔐 Hub server running at https://localhost:3001");
+  console.log("🔐 Hub server running at port 3001");
 });

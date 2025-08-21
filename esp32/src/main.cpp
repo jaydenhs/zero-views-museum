@@ -25,7 +25,8 @@ void webSocketEvent(uint8_t client, WStype_t type, uint8_t * payload, size_t len
 
     // JSON payloads
     if (length > 0 && payload[0] == '{') {
-      Serial.printf("Received JSON: %s\n", msg.c_str());  // Debug: see what we're getting
+      Serial.printf("Time: %lu ms\n", millis());
+      // Serial.printf("Received JSON: %s\n", msg.c_str());  // Debug: see what we're getting
       
       StaticJsonDocument<200> doc;
       DeserializationError error = deserializeJson(doc, msg);
@@ -35,11 +36,11 @@ void webSocketEvent(uint8_t client, WStype_t type, uint8_t * payload, size_t len
         return;
       }
       
-      // Debug: print all keys in the document
-      Serial.println("JSON keys found:");
-      for (JsonPair kv : doc.as<JsonObject>()) {
-        Serial.printf("  %s: %s\n", kv.key().c_str(), kv.value().as<const char*>());
-      }
+      // // Debug: print all keys in the document
+      // Serial.println("JSON keys found:");
+      // for (JsonPair kv : doc.as<JsonObject>()) {
+      //   Serial.printf("  %s: %s\n", kv.key().c_str(), kv.value().as<const char*>());
+      // }
       
       // Check if the fields exist and are not null before using them
       if (doc.containsKey("action") && doc.containsKey("canvas")) {

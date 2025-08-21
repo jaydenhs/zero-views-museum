@@ -29,3 +29,5 @@ You have to use https to start VR sessions, so --experimental-https is necessary
 
 DEMOS:
 - Roomscale demo: https://immersive-web.github.io/webxr-samples/room-scale.html
+
+You can force IWER to start outside of localhost by pressing Command+Option+E (https://pmndrs.github.io/xr/docs/getting-started/development-setup#2.-emulator:-iwer/devui)
