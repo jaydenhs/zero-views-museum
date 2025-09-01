@@ -9,9 +9,156 @@ import { VRControls } from "./components/VRControls";
 import { createClient } from "@supabase/supabase-js";
 import * as THREE from "three";
 
+// Function to process image and create LED array for 30x30 grid
+const processImageForLEDStrip = async (imageUrl, width = 30, height = 30) => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+
+    img.onload = () => {
+      // Create canvas to process image
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+
+      // Calculate crop dimensions to maintain aspect ratio
+      const imgAspectRatio = img.width / img.height;
+      const targetAspectRatio = width / height;
+
+      let sourceX, sourceY, sourceWidth, sourceHeight;
+
+      if (imgAspectRatio > targetAspectRatio) {
+        // Image is wider than target - crop from center
+        sourceHeight = img.height;
+        sourceWidth = img.height * targetAspectRatio;
+        sourceX = (img.width - sourceWidth) / 2;
+        sourceY = 0;
+      } else {
+        // Image is taller than target - crop from center
+        sourceWidth = img.width;
+        sourceHeight = img.width / targetAspectRatio;
+        sourceX = 0;
+        sourceY = (img.height - sourceHeight) / 2;
+      }
+
+      // Set canvas size to target LED grid size
+      canvas.width = width;
+      canvas.height = height;
+
+      // Draw cropped and resized image to canvas
+      ctx.drawImage(
+        img,
+        sourceX,
+        sourceY,
+        sourceWidth,
+        sourceHeight, // Source rectangle (cropped)
+        0,
+        0,
+        width,
+        height // Destination rectangle (target size)
+      );
+
+      // Get image data
+      const imageData = ctx.getImageData(0, 0, width, height);
+      const pixels = imageData.data;
+
+      // Increase saturation of the image
+      // Helper: convert RGB to HSL and back
+      function rgbToHsl(r, g, b) {
+        r /= 255;
+        g /= 255;
+        b /= 255;
+        const max = Math.max(r, g, b),
+          min = Math.min(r, g, b);
+        let h,
+          s,
+          l = (max + min) / 2;
+
+        if (max === min) {
+          h = s = 0; // achromatic
+        } else {
+          const d = max - min;
+          s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+          switch (max) {
+            case r:
+              h = (g - b) / d + (g < b ? 6 : 0);
+              break;
+            case g:
+              h = (b - r) / d + 2;
+              break;
+            case b:
+              h = (r - g) / d + 4;
+              break;
+          }
+          h /= 6;
+        }
+        return [h, s, l];
+      }
+
+      function hslToRgb(h, s, l) {
+        let r, g, b;
+
+        if (s === 0) {
+          r = g = b = l; // achromatic
+        } else {
+          function hue2rgb(p, q, t) {
+            if (t < 0) t += 1;
+            if (t > 1) t -= 1;
+            if (t < 1 / 6) return p + (q - p) * 6 * t;
+            if (t < 1 / 2) return q;
+            if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+            return p;
+          }
+          const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+          const p = 2 * l - q;
+          r = hue2rgb(p, q, h + 1 / 3);
+          g = hue2rgb(p, q, h);
+          b = hue2rgb(p, q, h - 1 / 3);
+        }
+        return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+      }
+
+      // Set the saturation boost factor (e.g., 1.5 = 50% more saturated)
+      const SATURATION_BOOST = 1.5;
+
+      // Create LED array with serpentine pattern
+      const ledArray = [];
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          // Serpentine pattern: reverse every other row
+          const actualX = y % 2 === 1 ? width - 1 - x : x;
+          const pixelIndex = (y * width + actualX) * 4;
+
+          // Extract RGB values (skip alpha)
+          let r = pixels[pixelIndex];
+          let g = pixels[pixelIndex + 1];
+          let b = pixels[pixelIndex + 2];
+
+          // Convert to HSL, boost saturation, clamp to [0,1], convert back to RGB
+          let [h, s, l] = rgbToHsl(r, g, b);
+          s = Math.min(s * SATURATION_BOOST, 1);
+          [r, g, b] = hslToRgb(h, s, l);
+
+          ledArray.push(r, g, b);
+        }
+      }
+
+      resolve(ledArray);
+    };
+
+    img.onerror = () => {
+      reject(new Error(`Failed to load image: ${imageUrl}`));
+    };
+
+    img.src = imageUrl;
+  });
+};
+
 const xrStore = createXRStore({
   originReferenceSpace: "viewer",
   bounded: true,
+  emulate: {
+    inject: true,
+  },
 });
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -30,7 +177,7 @@ const ESP32_WS_URL =
   typeof window !== "undefined" ? getWebSocketURL() : "ws://localhost:3001/ws";
 
 // Offline mode flag - set to true to use local images
-const OFFLINE_MODE = true;
+const OFFLINE_MODE = false;
 
 export default function VRView() {
   const [images, setImages] = useState([]);
@@ -96,11 +243,12 @@ export default function VRView() {
     }
 
     // Online mode: fetch from Supabase
-    const { data, error } = await supabase.rpc("get_random_artworks", {
-      limit_count: 4,
-      source_filter: "Flickr",
-      media_type_filter: "image",
-    });
+    const { data, error } = await supabase.rpc(
+      "get_unviewed_flickr_images_cc",
+      {
+        limit_count: 4,
+      }
+    );
 
     if (!error) {
       const imagesWithDimensions = await Promise.all(
@@ -118,7 +266,7 @@ export default function VRView() {
 
       const viewedIds = data.map((img) => img.id);
       await supabase
-        .from("artworks")
+        .from("artworks_cc")
         .update({ viewed: true })
         .in("id", viewedIds);
     }
@@ -136,7 +284,7 @@ export default function VRView() {
         <XR store={xrStore}>
           <Room images={images} />
           <VRControls onReload={fetchImages} />
-          <GazeRaycaster ws={ws} />
+          <GazeRaycaster ws={ws} images={images} />
         </XR>
       </Canvas>
       <div
@@ -170,7 +318,7 @@ export default function VRView() {
   );
 }
 
-function GazeRaycaster({ ws }) {
+function GazeRaycaster({ ws, images }) {
   const { camera, scene } = useThree();
   const raycasterRef = useRef(new THREE.Raycaster());
   const lastCanvasRef = useRef(null);
@@ -202,24 +350,84 @@ function GazeRaycaster({ ws }) {
 
     if (canvas && canvas !== lastCanvasRef.current) {
       lastCanvasRef.current = canvas;
-      // Send "looked at" command immediately when starting to look at a canvas
+      // Send "looked at" command with LED array data when starting to look at a canvas
       const target = canvas;
       if (ws.current && ws.current.readyState === 1 && target) {
-        ws.current.send(
-          JSON.stringify({ target, action: "looked_at", canvas })
-        );
+        // Find the image data for this canvas based on canvas position
+        let imageData = null;
+        if (canvas === "centerLeft" && images[1]) {
+          imageData = images[1];
+        } else if (canvas === "centerRight" && images[2]) {
+          imageData = images[2];
+        } else if (canvas === "left" && images[0]) {
+          imageData = images[0];
+        } else if (canvas === "right" && images[3]) {
+          imageData = images[3];
+        }
+
+        if (imageData) {
+          console.log(`Found image data for ${canvas}:`, imageData);
+          // Process the image and create LED array
+          processImageForLEDStrip(imageData.url)
+            .then((ledArray) => {
+              console.log(
+                `Created LED array for ${canvas}:`,
+                ledArray.length,
+                "values"
+              );
+
+              // Create binary message: [canvas_id][led_array_data]
+              const canvasId = canvas;
+              const canvasBytes = new TextEncoder().encode(canvasId);
+              const ledBytes = new Uint8Array(ledArray);
+
+              // Length-prefixed header: [length][canvas_id][led_data]
+              const header = new Uint8Array([canvasBytes.length]);
+              const combinedMessage = new Uint8Array(
+                1 + canvasBytes.length + ledBytes.length
+              );
+
+              combinedMessage.set(header, 0);
+              combinedMessage.set(canvasBytes, 1);
+              combinedMessage.set(ledBytes, 1 + canvasBytes.length);
+
+              // Send as single binary message
+              ws.current.send(combinedMessage);
+            })
+            .catch((error) => {
+              console.error("Error processing image:", error);
+            });
+        } else {
+          // Fallback if no image data found
+          console.log(`No image data found for canvas: ${canvas}`);
+          console.log(`Available images:`, images);
+          const payload = {
+            target,
+            action: "looked_at",
+            canvas,
+            ledArray: null,
+          };
+          ws.current.send(JSON.stringify(payload));
+        }
       }
     } else if (!canvas && lastCanvasRef.current) {
       // Send "not looked at" command when looking away from a canvas
       const target = lastCanvasRef.current;
       if (ws.current && ws.current.readyState === 1 && target) {
-        ws.current.send(
-          JSON.stringify({
-            target,
-            action: "not_looked_at",
-            canvas: lastCanvasRef.current,
-          })
-        );
+        // Send binary message: [canvas_id][0] (0 indicates clear)
+        const canvasId = target;
+        const canvasBytes = new TextEncoder().encode(canvasId);
+        const clearCommand = new Uint8Array([0]); // 0 = clear
+
+        // Length-prefixed header: [length][canvas_id][clear_command]
+        const header = new Uint8Array([canvasBytes.length]);
+        const combinedMessage = new Uint8Array(1 + canvasBytes.length + 1);
+
+        combinedMessage.set(header, 0);
+        combinedMessage.set(canvasBytes, 1);
+        combinedMessage.set(clearCommand, 1 + canvasBytes.length);
+
+        ws.current.send(combinedMessage);
       }
       lastCanvasRef.current = null;
     }

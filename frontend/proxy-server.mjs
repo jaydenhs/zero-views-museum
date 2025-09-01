@@ -17,10 +17,10 @@ const options = {
 const server = https.createServer(options, app);
 
 const DEVICE_URLS = {
-  // left: "ws://192.168.2.105:81",
-  centerLeft: "ws://192.168.2.106:81",
-  centerRight: "ws://192.168.2.107:81",
-  // right: "ws://192.168.2.108:81",
+  // left: "ws://10.10.10.105:81",
+  centerLeft: "ws://10.10.10.106:81",
+  centerRight: "ws://10.10.10.107:81",
+  // right: "ws://10.10.10.108:81",
 };
 
 const deviceSockets = new Map();
@@ -47,16 +47,33 @@ function connectToDevice(name, url) {
   connect();
 }
 
-function routeClientCommand(command) {
-  if (!command) return;
-  const { target, ...devicePayload } = command;
-  console.log(`Routing command to ${target}:`, devicePayload);
+// Function to route binary LED array data
+function routeBinaryData(target, binaryData) {
   const sock = deviceSockets.get(target);
   if (sock && sock.readyState === 1 && sock.send) {
-    sock.send(JSON.stringify(devicePayload));
-    console.log(`Sent to ${target}:`, JSON.stringify(devicePayload));
+    sock.send(binaryData);
+    console.log(`Sent binary data to ${target}: ${binaryData.length} bytes`);
   } else {
-    console.log(`Failed to send to ${target}: socket not ready`);
+    console.log(`Failed to send binary data to ${target}: socket not ready`);
+  }
+}
+
+// Function to route binary messages based on canvas ID
+function routeBinaryMessage(binaryData) {
+  const view = new Uint8Array(binaryData);
+  const nameLen = view[0];
+  const canvasId = Buffer.from(view.slice(1, 1 + nameLen)).toString("utf8");
+  const ledData = view.slice(1 + nameLen);
+
+  console.log(
+    `Routing binary message for canvas: ${canvasId}, data size: ${ledData.length} bytes`
+  );
+
+  // Route to the appropriate device based on canvas ID
+  if (deviceSockets.has(canvasId)) {
+    routeBinaryData(canvasId, binaryData);
+  } else {
+    console.log(`No device found for canvas: ${canvasId}`);
   }
 }
 
@@ -66,12 +83,12 @@ wss.on("connection", (ws) => {
   console.log(`New client connected`);
 
   ws.on("message", (data) => {
-    try {
-      const msg = JSON.parse(data.toString());
-      console.log(`Received from client:`, msg);
-      routeClientCommand(msg);
-    } catch (error) {
-      console.error(`Failed to parse client message:`, error.message);
+    // All messages are now binary
+    if (data instanceof Buffer) {
+      console.log(`Received binary message: ${data.length} bytes`);
+      routeBinaryMessage(data);
+    } else {
+      console.log(`Received non-binary message, ignoring`);
     }
   });
 
