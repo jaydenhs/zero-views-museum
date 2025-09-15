@@ -9,8 +9,10 @@
 
 // Static IP configuration for each board
 const uint8_t base_ip[] = {10, 10, 10};
+// const uint8_t base_ip[] = {169, 254, 155};
 IPAddress local_IP(base_ip[0], base_ip[1], base_ip[2], IP_OCTET);  // IP_OCTET defined by PIO
 IPAddress gateway(base_ip[0], base_ip[1], base_ip[2], 1);          // Your router's IP
+// IPAddress gateway(0, 0, 0, 0);  // No gateway for link-local network
 IPAddress subnet(255, 255, 255, 0);
 IPAddress dns(8, 8, 8, 8);
 
@@ -280,7 +282,7 @@ void setup() {
   
   // Initialize LED strip
   FastLED.addLeds<WS2812B, LED_PIN, GRB>(leds, NUM_LEDS);
-  FastLED.setBrightness(100); // Reduced brightness to save memory
+  FastLED.setBrightness(100);
   FastLED.clear();
   FastLED.show();
   

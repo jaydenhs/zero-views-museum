@@ -5,13 +5,43 @@ import WebSocket, { WebSocketServer } from "ws";
 
 const app = express();
 
+// Add CORS and security headers for Quest 2 compatibility
+app.use((req, res, next) => {
+  // CORS headers
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+  );
+
+  // Security headers for Quest 2
+  res.header("X-Frame-Options", "SAMEORIGIN");
+  res.header("X-Content-Type-Options", "nosniff");
+  res.header("Referrer-Policy", "strict-origin-when-cross-origin");
+
+  // Content Security Policy for Quest 2
+  res.header(
+    "Content-Security-Policy",
+    "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: blob:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:; connect-src 'self' https: wss:; frame-src 'self' https:; worker-src 'self' blob: data:; child-src 'self' blob: data:; object-src 'none'; base-uri 'self';"
+  );
+
+  // Handle preflight requests
+  if (req.method === "OPTIONS") {
+    res.sendStatus(200);
+    return;
+  }
+
+  next();
+});
+
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
 const options = {
-  key: fs.readFileSync("certificates/localhost-key.pem"),
-  cert: fs.readFileSync("certificates/localhost.pem"),
+  key: fs.readFileSync("../certificates/vr-museum-key.pem"),
+  cert: fs.readFileSync("../certificates/vr-museum.pem"),
 };
 
 const server = https.createServer(options, app);
@@ -19,9 +49,16 @@ const server = https.createServer(options, app);
 const DEVICE_URLS = {
   // left: "ws://10.10.10.105:81",
   centerLeft: "ws://10.10.10.106:81",
-  centerRight: "ws://10.10.10.107:81",
+  // centerRight: "ws://10.10.10.107:81",
   // right: "ws://10.10.10.108:81",
 };
+
+// const DEVICE_URLS = {
+//   // left: "ws://10.10.10.105:81",
+//   centerLeft: "ws://167.254.155.106:81",
+//   // centerRight: "ws://10.10.10.107:81",
+//   // right: "ws://10.10.10.108:81",
+// };
 
 const deviceSockets = new Map();
 

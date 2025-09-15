@@ -6,8 +6,98 @@ import { XR, createXRStore } from "@react-three/xr";
 import { PerspectiveCamera } from "@react-three/drei";
 import Room from "./components/Room";
 import { VRControls } from "./components/VRControls";
+import DebugConsole from "./components/DebugConsole";
 import { createClient } from "@supabase/supabase-js";
 import * as THREE from "three";
+
+// Configuration - Set to true for offline mode
+const OFFLINE_MODE = true;
+// Use relative URLs to leverage Next.js proxy
+const LOCAL_API_URL = ""; // Empty string means relative URLs will be used
+
+// Function to test HTTPS connection (required for WebXR)
+const testHttpsConnection = async () => {
+  try {
+    console.log("Testing HTTPS connection...");
+    const response = await fetch(`/api/health`, {
+      method: "GET",
+      mode: "cors",
+      cache: "no-cache",
+    });
+    if (response.ok) {
+      console.log("HTTPS connection successful");
+      return true;
+    } else {
+      console.error(`HTTPS connection failed with status: ${response.status}`);
+      return false;
+    }
+  } catch (error) {
+    console.error("HTTPS connection failed:", error.message);
+    console.error(
+      "This is likely a certificate issue. Quest 2 requires valid HTTPS certificates."
+    );
+    return false;
+  }
+};
+
+// Global console log capture - starts immediately when page loads
+const globalLogs = [];
+const maxLogs = 100;
+
+const addGlobalLog = (level, args) => {
+  const timestamp = new Date().toLocaleTimeString();
+  const message = args
+    .map((arg) =>
+      typeof arg === "object" ? JSON.stringify(arg, null, 2) : String(arg)
+    )
+    .join(" ");
+
+  const newLog = {
+    id: Date.now() + Math.random(),
+    timestamp,
+    level,
+    message,
+    time: Date.now(),
+  };
+
+  globalLogs.unshift(newLog);
+  if (globalLogs.length > maxLogs) {
+    globalLogs.splice(maxLogs);
+  }
+
+  // Dispatch event to notify components of new log (only in browser)
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("newConsoleLog", { detail: newLog }));
+  }
+};
+
+// Capture console methods immediately (only in browser)
+if (typeof window !== "undefined") {
+  const originalLog = console.log;
+  const originalError = console.error;
+  const originalWarn = console.warn;
+  const originalInfo = console.info;
+
+  console.log = (...args) => {
+    originalLog(...args);
+    addGlobalLog("log", args);
+  };
+
+  console.error = (...args) => {
+    originalError(...args);
+    addGlobalLog("error", args);
+  };
+
+  console.warn = (...args) => {
+    originalWarn(...args);
+    addGlobalLog("warn", args);
+  };
+
+  console.info = (...args) => {
+    originalInfo(...args);
+    addGlobalLog("info", args);
+  };
+}
 
 // Function to process image and create LED array for 30x30 grid
 const processImageForLEDStrip = async (imageUrl, width = 30, height = 30) => {
@@ -160,10 +250,14 @@ const xrStore = createXRStore({
     inject: true,
   },
 });
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_KEY
-);
+
+// Initialize Supabase client (only used in online mode)
+const supabase = OFFLINE_MODE
+  ? null
+  : createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_KEY
+    );
 
 // Dynamic WebSocket URL that works for both localhost and network access
 const getWebSocketURL = () => {
@@ -176,81 +270,215 @@ const getWebSocketURL = () => {
 const ESP32_WS_URL =
   typeof window !== "undefined" ? getWebSocketURL() : "ws://localhost:3001/ws";
 
-// Offline mode flag - set to true to use local images
-const OFFLINE_MODE = false;
+// API functions for different modes
+const api = {
+  // Fetch unviewed images
+  async fetchUnviewedImages() {
+    if (OFFLINE_MODE) {
+      // Test HTTPS connection first
+      const isHttpsWorking = await testHttpsConnection();
+      if (!isHttpsWorking) {
+        throw new Error(
+          "HTTPS connection failed. Quest 2 requires valid SSL certificates."
+        );
+      }
+
+      // Use local API
+      console.log(`Making request to: /api/artworks/unviewed?limit=4`);
+      try {
+        const response = await fetch(`/api/artworks/unviewed?limit=4`);
+        console.log(`Response status: ${response.status}`);
+        console.log(
+          `Response headers:`,
+          Object.fromEntries(response.headers.entries())
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`API Error Response:`, errorText);
+          throw new Error(`Local API error: ${response.status} - ${errorText}`);
+        }
+        const data = await response.json();
+        console.log(`Received data:`, data);
+        return data;
+      } catch (error) {
+        console.error(`Fetch error details:`, error);
+        throw error;
+      }
+    } else {
+      // Use Supabase
+      const { data, error } = await supabase.rpc(
+        "get_unviewed_flickr_images_cc",
+        {
+          limit_count: 4,
+        }
+      );
+      if (error) throw error;
+      return data;
+    }
+  },
+
+  // Mark images as viewed
+  async markAsViewed(imageIds) {
+    if (OFFLINE_MODE) {
+      // Use local API
+      const response = await fetch(`/api/artworks/view`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ids: imageIds }),
+      });
+      if (!response.ok) {
+        throw new Error(`Local API error: ${response.status}`);
+      }
+      return await response.json();
+    } else {
+      // Use Supabase
+      const { error } = await supabase
+        .from("artworks_cc")
+        .update({ viewed: true })
+        .in("id", imageIds);
+      if (error) throw error;
+      return { success: true };
+    }
+  },
+
+  // Get API status
+  async getStatus() {
+    if (OFFLINE_MODE) {
+      console.log(`Making health check request to: /api/health`);
+      try {
+        const response = await fetch(`/api/health`);
+        console.log(`Health check response status: ${response.status}`);
+        const data = await response.json();
+        console.log(`Health check data:`, data);
+        return data;
+      } catch (error) {
+        console.error(`Health check error:`, error);
+        throw error;
+      }
+    } else {
+      return { status: "online", service: "Supabase" };
+    }
+  },
+};
 
 export default function VRView() {
   const [images, setImages] = useState([]);
+  const [apiStatus, setApiStatus] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [chunkError, setChunkError] = useState(null);
+  const [debugConsoleVisible, setDebugConsoleVisible] = useState(true);
+  const [debugLogs, setDebugLogs] = useState(globalLogs);
   const ws = useRef(null);
 
+  // Listen for new console logs
   useEffect(() => {
-    ws.current = new window.WebSocket(ESP32_WS_URL);
-    ws.current.onopen = () => console.log("WebSocket connected to ESP32");
-    ws.current.onclose = () => console.log("WebSocket disconnected from ESP32");
-    ws.current.onerror = (e) => console.error("WebSocket error", e);
-    ws.current.onmessage = (event) =>
-      console.log("Received message:", event.data);
+    const handleNewLog = () => {
+      setDebugLogs([...globalLogs]);
+    };
+
+    if (typeof window !== "undefined") {
+      console.log("Window is undefined");
+      window.addEventListener("newConsoleLog", handleNewLog);
+      return () => window.removeEventListener("newConsoleLog", handleNewLog);
+    } else {
+      console.log("Window is defined");
+    }
+  }, []);
+
+  useEffect(() => {
+    let reconnectTimeout;
+    let reconnectAttempts = 0;
+    const maxReconnectAttempts = 3;
+    const reconnectDelay = 2000; // 2 seconds
+
+    const connectWebSocket = () => {
+      try {
+        ws.current = new window.WebSocket(ESP32_WS_URL);
+
+        ws.current.onopen = () => {
+          console.log("WebSocket connected to ESP32");
+          reconnectAttempts = 0; // Reset on successful connection
+        };
+
+        ws.current.onclose = (event) => {
+          console.log(
+            "WebSocket disconnected from ESP32",
+            event.code,
+            event.reason
+          );
+
+          // Attempt to reconnect if not a normal closure
+          if (event.code !== 1000 && reconnectAttempts < maxReconnectAttempts) {
+            reconnectAttempts++;
+            console.log(
+              `Attempting to reconnect (${reconnectAttempts}/${maxReconnectAttempts}) in ${reconnectDelay}ms...`
+            );
+            reconnectTimeout = setTimeout(connectWebSocket, reconnectDelay);
+          } else if (reconnectAttempts >= maxReconnectAttempts) {
+            console.error(
+              "Max reconnection attempts reached. WebSocket connection failed."
+            );
+          }
+        };
+
+        ws.current.onerror = (error) => {
+          console.error("WebSocket error:", error);
+          // Don't log empty error objects
+          if (error && Object.keys(error).length > 0) {
+            console.error("WebSocket error details:", error);
+          }
+        };
+
+        ws.current.onmessage = (event) => {
+          console.log("Received message:", event.data);
+        };
+      } catch (error) {
+        console.error("Failed to create WebSocket connection:", error);
+        if (reconnectAttempts < maxReconnectAttempts) {
+          reconnectAttempts++;
+          console.log(
+            `Retrying WebSocket connection (${reconnectAttempts}/${maxReconnectAttempts}) in ${reconnectDelay}ms...`
+          );
+          reconnectTimeout = setTimeout(connectWebSocket, reconnectDelay);
+        }
+      }
+    };
+
+    connectWebSocket();
+
     return () => {
-      if (ws.current) ws.current.close();
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+      }
+      if (ws.current) {
+        ws.current.close(1000, "Component unmounting");
+      }
     };
   }, []);
 
   const fetchImages = async () => {
-    if (OFFLINE_MODE) {
-      // Load local offline images
-      const offlineImages = [
-        {
-          id: "offline-1",
-          url: "/offline-images/1.avif",
-          creator_name: "Offline Artist 1",
-          title: "Offline Artwork 1",
-          created_at: "2024-01-01",
-          width: 1920,
-          height: 1080,
-        },
-        {
-          id: "offline-2",
-          url: "/offline-images/2.avif",
-          creator_name: "Offline Artist 2",
-          title: "Offline Artwork 2",
-          created_at: "2024-01-02",
-          width: 1920,
-          height: 1080,
-        },
-        {
-          id: "offline-3",
-          url: "/offline-images/3.jpg",
-          creator_name: "Offline Artist 3",
-          title: "Offline Artwork 3",
-          created_at: "2024-01-03",
-          width: 1920,
-          height: 1080,
-        },
-        {
-          id: "offline-4",
-          url: "/offline-images/4.jpg",
-          creator_name: "Offline Artist 4",
-          title: "Offline Artwork 4",
-          created_at: "2024-01-04",
-          width: 1920,
-          height: 1080,
-        },
-      ];
+    try {
+      setLoading(true);
+      setError(null);
 
-      console.log("Offline mode: Loading local images");
-      setImages(offlineImages);
-      return;
-    }
+      console.log(
+        `Fetching images in ${OFFLINE_MODE ? "offline" : "online"} mode...`
+      );
+      console.log(`API URL: /api (proxied to Flask server)`);
 
-    // Online mode: fetch from Supabase
-    const { data, error } = await supabase.rpc(
-      "get_unviewed_flickr_images_cc",
-      {
-        limit_count: 4,
+      const data = await api.fetchUnviewedImages();
+
+      if (!data || data.length === 0) {
+        console.log("No unviewed images found");
+        setImages([]);
+        return;
       }
-    );
 
-    if (!error) {
+      // Get image dimensions for each image
       const imagesWithDimensions = await Promise.all(
         data.map(
           (img) =>
@@ -258,22 +486,136 @@ export default function VRView() {
               const image = new Image();
               image.src = img.url;
               image.onload = () =>
-                resolve({ ...img, width: image.width, height: image.height });
+                resolve({
+                  ...img,
+                  width: image.width,
+                  height: image.height,
+                });
+              image.onerror = () => {
+                console.warn(`Failed to load image: ${img.url}`);
+                resolve({
+                  ...img,
+                  width: 1920,
+                  height: 1080,
+                });
+              };
             })
         )
       );
+
       setImages(imagesWithDimensions);
 
+      // Mark images as viewed
       const viewedIds = data.map((img) => img.id);
-      await supabase
-        .from("artworks_cc")
-        .update({ viewed: true })
-        .in("id", viewedIds);
+      // await api.markAsViewed(viewedIds);
+      console.log(`Marked ${viewedIds.length} images as viewed`);
+    } catch (err) {
+      console.error("Error fetching images:", err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
+  const checkApiStatus = async () => {
+    try {
+      const status = await api.getStatus();
+      setApiStatus(status);
+    } catch (err) {
+      console.error("Error checking API status:", err);
+      setApiStatus({ status: "error", error: err.message });
+    }
+  };
+
+  const testApiConnection = async () => {
+    console.log("🧪 Manual API Test Started");
+    console.log("=".repeat(50));
+
+    try {
+      // Test 1: Health check
+      console.log("1️⃣ Testing health endpoint...");
+      const healthResponse = await fetch(`/api/health`);
+      console.log(`   Status: ${healthResponse.status}`);
+      const healthData = await healthResponse.json();
+      console.log("   Response:", healthData);
+
+      // Test 2: Images endpoint
+      console.log("2️⃣ Testing images endpoint...");
+      const imagesResponse = await fetch(`/api/artworks/unviewed?limit=4`);
+      console.log(`   Status: ${imagesResponse.status}`);
+      const imagesData = await imagesResponse.json();
+      console.log("   Response:", imagesData);
+
+      // Test 3: API status function
+      console.log("3️⃣ Testing API status function...");
+      const apiStatus = await api.getStatus();
+      console.log("   API Status:", apiStatus);
+
+      console.log("✅ All API tests completed successfully!");
+    } catch (error) {
+      console.error("❌ API test failed:", error);
+      console.error("   Error details:", error.message);
+      console.error("   Stack trace:", error.stack);
+    }
+
+    console.log("=".repeat(50));
+    console.log("🧪 Manual API Test Completed");
+  };
+
   useEffect(() => {
-    fetchImages();
+    // Add global error handler for chunk loading failures
+    const handleChunkError = (event) => {
+      if (event.reason && event.reason.name === "ChunkLoadError") {
+        console.error("Chunk load error:", event.reason);
+        setChunkError(
+          "Failed to load application resources. Please refresh the page."
+        );
+      }
+    };
+
+    // Handle debug console close event
+    const handleCloseDebugConsole = () => {
+      setDebugConsoleVisible(false);
+    };
+
+    // Handle keyboard shortcut for debug console
+    const handleKeyPress = (event) => {
+      if (event.ctrlKey && event.shiftKey && event.key === "D") {
+        setDebugConsoleVisible((prev) => !prev);
+      }
+    };
+
+    // window.addEventListener("unhandledrejection", handleChunkError);
+    window.addEventListener("closeDebugConsole", handleCloseDebugConsole);
+    window.addEventListener("keydown", handleKeyPress);
+
+    // Test HTTPS connection first, then proceed with API calls
+    const initializeApp = async () => {
+      console.log("Initializing VR Museum App...");
+      console.log(`Target API URL: /api (proxied to Flask server)`);
+
+      if (OFFLINE_MODE) {
+        const isHttpsWorking = await testHttpsConnection();
+        if (!isHttpsWorking) {
+          setError(
+            "HTTPS connection failed. Quest 2 requires valid SSL certificates. Please check your certificate configuration."
+          );
+          setLoading(false);
+          return;
+        }
+      }
+
+      checkApiStatus();
+      fetchImages();
+    };
+
+    initializeApp();
+
+    return () => {
+      window.removeEventListener("unhandledrejection", handleChunkError);
+      window.removeEventListener("closeDebugConsole", handleCloseDebugConsole);
+      window.removeEventListener("keydown", handleKeyPress);
+    };
   }, []);
 
   return (
@@ -287,6 +629,27 @@ export default function VRView() {
           <GazeRaycaster ws={ws} images={images} />
         </XR>
       </Canvas>
+
+      {/* Debug Console */}
+      {debugConsoleVisible && (
+        <DebugConsole
+          ws={ws}
+          apiStatus={apiStatus}
+          images={images}
+          loading={loading}
+          error={error}
+          chunkError={chunkError}
+          offlineMode={OFFLINE_MODE}
+          logs={debugLogs}
+          onClearLogs={() => {
+            globalLogs.length = 0;
+            setDebugLogs([]);
+          }}
+          onTestApi={testApiConnection}
+        />
+      )}
+
+      {/* Status and controls overlay */}
       <div
         style={{
           position: "fixed",
@@ -297,22 +660,66 @@ export default function VRView() {
           justifyContent: "space-between",
           alignItems: "center",
           color: "white",
+          pointerEvents: "none", // Allow clicks to pass through
         }}
       >
-        <button
-          onClick={() => xrStore.enterVR()}
+        {/* Debug Console Toggle Button */}
+        <div
+          style={{
+            position: "fixed",
+            top: "20px",
+            right: "20px",
+            pointerEvents: "auto",
+          }}
+        >
+          <button
+            onClick={() => setDebugConsoleVisible(!debugConsoleVisible)}
+            style={{
+              background: "rgba(0, 0, 0, 0.8)",
+              color: "white",
+              border: "2px solid #007acc",
+              borderRadius: "50%",
+              width: "50px",
+              height: "50px",
+              fontSize: "20px",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+            title="Toggle Debug Console (Ctrl+Shift+D)"
+          >
+            🐛
+          </button>
+        </div>
+
+        {/* Bottom controls */}
+        <div
           style={{
             position: "fixed",
             bottom: "20px",
             left: "50%",
             transform: "translateX(-50%)",
-            fontSize: "20px",
-            background: "blue",
-            padding: "1rem",
+            display: "flex",
+            gap: "10px",
+            pointerEvents: "auto",
           }}
         >
-          Enter VR
-        </button>
+          <button
+            onClick={() => xrStore.enterVR()}
+            style={{
+              fontSize: "20px",
+              background: "blue",
+              padding: "1rem",
+              border: "none",
+              borderRadius: "5px",
+              color: "white",
+              cursor: "pointer",
+            }}
+          >
+            Enter VR
+          </button>
+        </div>
       </div>
     </>
   );
@@ -352,7 +759,7 @@ function GazeRaycaster({ ws, images }) {
       lastCanvasRef.current = canvas;
       // Send "looked at" command with LED array data when starting to look at a canvas
       const target = canvas;
-      if (ws.current && ws.current.readyState === 1 && target) {
+      if (ws.current && ws.current.readyState === WebSocket.OPEN && target) {
         // Find the image data for this canvas based on canvas position
         let imageData = null;
         if (canvas === "centerLeft" && images[1]) {
@@ -413,7 +820,7 @@ function GazeRaycaster({ ws, images }) {
     } else if (!canvas && lastCanvasRef.current) {
       // Send "not looked at" command when looking away from a canvas
       const target = lastCanvasRef.current;
-      if (ws.current && ws.current.readyState === 1 && target) {
+      if (ws.current && ws.current.readyState === WebSocket.OPEN && target) {
         // Send binary message: [canvas_id][0] (0 indicates clear)
         const canvasId = target;
         const canvasBytes = new TextEncoder().encode(canvasId);
