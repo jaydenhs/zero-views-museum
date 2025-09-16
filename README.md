@@ -14,7 +14,7 @@ This encounter invites reflection: Are algorithms good arbiters of artistic wort
 
 ![Implementation](readme/Implementation.png)
 
-### Data (`/data`)
+### Data (`/data-querying`)
 
 In an `.env` file, you need to define the following environment variables:
 

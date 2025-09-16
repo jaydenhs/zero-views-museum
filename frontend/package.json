@@ -3,9 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "NODE_TLS_REJECT_UNAUTHORIZED=0 next dev --experimental-https --experimental-https-key ../certificates/vr-museum-key.pem --experimental-https-cert ../certificates/vr-museum.pem",
-    "dev:turbo": "next dev --turbopack --experimental-https --experimental-https-key ../certificates/vr-museum-key.pem --experimental-https-cert ../certificates/vr-museum.pem",
-    "dev:http": "next dev",
+    "dev": "next dev --experimental-https",
+    "dev:turbo": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"

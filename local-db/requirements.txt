@@ -1,9 +1,0 @@
-# Local database and API requirements
-flask==3.0.0
-flask-cors==4.0.0
-aiohttp==3.9.1
-aiofiles==23.2.1
-pillow>=10.4.0
-python-dotenv==1.0.0
-supabase==2.1.0
-tqdm==4.66.1

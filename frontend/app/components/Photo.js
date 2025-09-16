@@ -1,8 +1,10 @@
 import { useLoader } from "@react-three/fiber";
 import { TextureLoader } from "three";
 import { Text } from "@react-three/drei";
+import { toFlickrSize } from "../lib/flickr";
 
 export default function Photo({ image, position, canvas }) {
+  image.url = toFlickrSize(image.url, "t");
   const texture = useLoader(TextureLoader, image?.url || null);
 
   if (!image) {
