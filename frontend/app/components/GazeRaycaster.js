@@ -8,6 +8,26 @@ export default function GazeRaycaster({ ws, images }) {
   const { camera, scene } = useThree();
   const raycasterRef = useRef(new THREE.Raycaster());
   const lastCanvasRef = useRef(null);
+  const postingRef = useRef(false);
+
+  const postState = async (canvasId, lookedAt) => {
+    try {
+      // Avoid overlapping posts on rapid toggles
+      if (postingRef.current) return;
+      postingRef.current = true;
+      await fetch(`/api/canvas/${canvasId}/state`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lookedAt }),
+        // keepalive helps allow requests during page unloads; harmless otherwise
+        keepalive: true,
+      });
+    } catch (e) {
+      // Silent fail to avoid spamming console during renders
+    } finally {
+      postingRef.current = false;
+    }
+  };
 
   useFrame(() => {
     if (!camera || !scene) return;
@@ -50,19 +70,27 @@ export default function GazeRaycaster({ ws, images }) {
         }
 
         if (imageData) {
+          // Notify server that this canvas is being looked at
+          postState(target, true);
+
           const sendBytes = (ledArr) => {
             const canvasId = canvas;
-            const canvasBytes = new TextEncoder().encode(canvasId);
-            const ledBytes = new Uint8Array(ledArr);
-            const header = new Uint8Array([canvasBytes.length]);
-            const combinedMessage = new Uint8Array(
-              1 + canvasBytes.length + ledBytes.length
+            const ledBytes = new Uint8Array(ledArr); // 900*3 bytes
+            // POST raw bytes to the imageBytes endpoint for this canvas
+            try {
+              fetch(`/api/canvas/${canvasId}/imageBytes`, {
+                method: "POST",
+                headers: { "Content-Type": "application/octet-stream" },
+                body: ledBytes,
+                keepalive: true,
+              });
+            } catch (_) {}
+            console.log(
+              "Posted imageBytes (",
+              ledBytes.byteLength,
+              "bytes) for:",
+              canvasId
             );
-            combinedMessage.set(header, 0);
-            combinedMessage.set(canvasBytes, 1);
-            combinedMessage.set(ledBytes, 1 + canvasBytes.length);
-            // ws.current.send(combinedMessage);
-            console.log("Sent bytes:", combinedMessage);
           };
           if (imageData.ledArray && imageData.ledArray.length) {
             sendBytes(imageData.ledArray);
@@ -73,16 +101,15 @@ export default function GazeRaycaster({ ws, images }) {
       console.log("Not looking at canvas:", lastCanvasRef.current);
       const target = lastCanvasRef.current;
       if (target) {
-        const canvasId = target;
-        const canvasBytes = new TextEncoder().encode(canvasId);
-        const clearCommand = new Uint8Array([0]);
-        const header = new Uint8Array([canvasBytes.length]);
-        const combinedMessage = new Uint8Array(1 + canvasBytes.length + 1);
-        combinedMessage.set(header, 0);
-        combinedMessage.set(canvasBytes, 1);
-        combinedMessage.set(clearCommand, 1 + canvasBytes.length);
-        // ws.current.send(combinedMessage);
-        console.log("Sent clear command:", combinedMessage);
+        // Notify server that this canvas is no longer looked at
+        postState(target, false);
+        // Optionally clear imageBytes for this canvas
+        try {
+          fetch(`/api/canvas/${target}/imageBytes`, {
+            method: "DELETE",
+            keepalive: true,
+          });
+        } catch (_) {}
       }
       lastCanvasRef.current = null;
     }
