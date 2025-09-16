@@ -6,17 +6,6 @@ export default function Photo({ image, position, canvas }) {
   const uri = image?.displayUrl;
   const texture = useLoader(TextureLoader, uri || null);
 
-  if (!image) {
-    return (
-      <group position={position} userData={{ canvas }} name={canvas || "photo"}>
-        <mesh>
-          <boxGeometry args={[2.7, 1.5, 0.1]} />
-          <meshStandardMaterial color="white" />
-        </mesh>
-      </group>
-    );
-  }
-
   // Calculate dimensions preserving aspect ratio with maximums
   const aspect = image.width / image.height;
   let photoW, photoH;
@@ -46,7 +35,7 @@ export default function Photo({ image, position, canvas }) {
   return (
     <group position={position} userData={{ canvas }} name={canvas || "photo"}>
       {/* Photo */}
-      <mesh>
+      <mesh castShadow>
         <boxGeometry args={[photoW, photoH, 0.1]} />
         <meshStandardMaterial map={texture} />
       </mesh>
