@@ -9,6 +9,7 @@ import { VRControls } from "./components/VRControls";
 import { createClient } from "@supabase/supabase-js";
 import GazeRaycaster from "./components/GazeRaycaster";
 import { toFlickrSize } from "./lib/flickr";
+import { processImageForLEDStrip } from "./lib/imageProcessing";
 
 const xrStore = createXRStore({
   originReferenceSpace: "viewer",
@@ -48,16 +49,33 @@ export default function VRView() {
       const imagesWithDimensions = await Promise.all(
         data.map(
           (img) =>
-            new Promise((resolve) => {
+            new Promise(async (resolve) => {
+              // Fetch high-res (b) once and create a blob URL
+              let displayUrl = toFlickrSize(img.url, "b");
+              try {
+                const resp = await fetch(displayUrl, { cache: "force-cache" });
+                const blob = await resp.blob();
+                displayUrl = URL.createObjectURL(blob);
+                console.log("Created blob URL:", displayUrl);
+              } catch {}
+
               const image = new Image();
-              // Fetch a smaller variant for quick intrinsic sizing
-              image.src = img.url; // 100px
-              image.onload = () =>
+              image.src = displayUrl;
+              image.onload = async () => {
+                // Compute LED array from the same high-res source (downsampled inside)
+                let ledArray = [];
+                try {
+                  ledArray = await processImageForLEDStrip(displayUrl);
+                } catch {}
+
                 resolve({
                   ...img,
                   width: image.width,
                   height: image.height,
+                  ledArray,
+                  displayUrl,
                 });
+              };
             })
         )
       );

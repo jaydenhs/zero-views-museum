@@ -3,8 +3,6 @@
 import { useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
-import { processImageForLEDStrip } from "../lib/imageProcessing";
-import { toFlickrSize } from "../lib/flickr";
 
 export default function GazeRaycaster({ ws, images }) {
   const { camera, scene } = useThree();
@@ -36,9 +34,10 @@ export default function GazeRaycaster({ ws, images }) {
     }
 
     if (canvas && canvas !== lastCanvasRef.current) {
+      console.log("Looking at canvas:", canvas);
       lastCanvasRef.current = canvas;
       const target = canvas;
-      if (ws.current && ws.current.readyState === WebSocket.OPEN && target) {
+      if (target) {
         let imageData = null;
         if (canvas === "centerLeft" && images[1]) {
           imageData = images[1];
@@ -51,27 +50,29 @@ export default function GazeRaycaster({ ws, images }) {
         }
 
         if (imageData) {
-          // Use smallest Flickr size for LED processing (bandwidth-friendly)
-          processImageForLEDStrip(toFlickrSize(imageData.url, "t")) // thumbnail size, high resolution is unnecessary for colour encoding
-            .then((ledArray) => {
-              const canvasId = canvas;
-              const canvasBytes = new TextEncoder().encode(canvasId);
-              const ledBytes = new Uint8Array(ledArray);
-              const header = new Uint8Array([canvasBytes.length]);
-              const combinedMessage = new Uint8Array(
-                1 + canvasBytes.length + ledBytes.length
-              );
-              combinedMessage.set(header, 0);
-              combinedMessage.set(canvasBytes, 1);
-              combinedMessage.set(ledBytes, 1 + canvasBytes.length);
-              ws.current.send(combinedMessage);
-            })
-            .catch(() => {});
+          const sendBytes = (ledArr) => {
+            const canvasId = canvas;
+            const canvasBytes = new TextEncoder().encode(canvasId);
+            const ledBytes = new Uint8Array(ledArr);
+            const header = new Uint8Array([canvasBytes.length]);
+            const combinedMessage = new Uint8Array(
+              1 + canvasBytes.length + ledBytes.length
+            );
+            combinedMessage.set(header, 0);
+            combinedMessage.set(canvasBytes, 1);
+            combinedMessage.set(ledBytes, 1 + canvasBytes.length);
+            // ws.current.send(combinedMessage);
+            console.log("Sent bytes:", combinedMessage);
+          };
+          if (imageData.ledArray && imageData.ledArray.length) {
+            sendBytes(imageData.ledArray);
+          }
         }
       }
     } else if (!canvas && lastCanvasRef.current) {
+      console.log("Not looking at canvas:", lastCanvasRef.current);
       const target = lastCanvasRef.current;
-      if (ws.current && ws.current.readyState === WebSocket.OPEN && target) {
+      if (target) {
         const canvasId = target;
         const canvasBytes = new TextEncoder().encode(canvasId);
         const clearCommand = new Uint8Array([0]);
@@ -80,7 +81,8 @@ export default function GazeRaycaster({ ws, images }) {
         combinedMessage.set(header, 0);
         combinedMessage.set(canvasBytes, 1);
         combinedMessage.set(clearCommand, 1 + canvasBytes.length);
-        ws.current.send(combinedMessage);
+        // ws.current.send(combinedMessage);
+        console.log("Sent clear command:", combinedMessage);
       }
       lastCanvasRef.current = null;
     }
