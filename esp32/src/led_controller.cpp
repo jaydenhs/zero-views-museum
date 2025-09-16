@@ -27,6 +27,7 @@ void led_init() {
 }
 
 void led_apply_bytes(const uint8_t *payload, size_t length) {
+  Serial.println("Applying bytes to LEDs");
   if (length != led_expected_bytes()) return;
   for (int i = 0; i < NUM_LEDS; i++) {
     int idx = i * 3;
@@ -41,6 +42,7 @@ void led_apply_bytes(const uint8_t *payload, size_t length) {
 }
 
 void led_fade_out_or_clear() {
+  Serial.println("Fading out LEDs");
   if (hasImageData) {
     for (int i = 0; i < NUM_LEDS; i++) {
       startLeds[i] = leds[i];
@@ -75,6 +77,7 @@ void led_update_fade() {
   }
 
   float progress = (float)fadeState.currentStep / FADE_STEPS;
+  Serial.println("Progress: " + String(progress));
   for (int i = 0; i < NUM_LEDS; i++) {
     if (fadeState.isFadeIn) {
       uint8_t r = startLeds[i].r + (targetLeds[i].r - startLeds[i].r) * progress;
@@ -89,6 +92,10 @@ void led_update_fade() {
     }
   }
   FastLED.show();
+}
+
+bool led_is_animating() {
+  return fadeState.active;
 }
 
 

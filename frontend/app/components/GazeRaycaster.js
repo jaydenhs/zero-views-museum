@@ -8,24 +8,33 @@ export default function GazeRaycaster({ ws, images }) {
   const { camera, scene } = useThree();
   const raycasterRef = useRef(new THREE.Raycaster());
   const lastCanvasRef = useRef(null);
-  const postingRef = useRef(false);
+  const postingRef = useRef({ ctrl: null, lastTs: 0, inFlight: false });
 
   const postState = async (canvasId, lookedAt) => {
     try {
-      // Avoid overlapping posts on rapid toggles
-      if (postingRef.current) return;
-      postingRef.current = true;
+      const now = Date.now();
+      postingRef.current.lastTs = now;
+      // Abort any in-flight request; we only care about latest intent
+      if (postingRef.current.ctrl) {
+        try {
+          postingRef.current.ctrl.abort();
+        } catch (_) {}
+      }
+      const ctrl = new AbortController();
+      postingRef.current.ctrl = ctrl;
+      postingRef.current.inFlight = true;
       await fetch(`/api/canvas/${canvasId}/state`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lookedAt }),
+        body: JSON.stringify({ lookedAt, ts: now }),
         // keepalive helps allow requests during page unloads; harmless otherwise
         keepalive: true,
+        signal: ctrl.signal,
       });
     } catch (e) {
       // Silent fail to avoid spamming console during renders
     } finally {
-      postingRef.current = false;
+      postingRef.current.inFlight = false;
     }
   };
 
@@ -58,6 +67,9 @@ export default function GazeRaycaster({ ws, images }) {
       lastCanvasRef.current = canvas;
       const target = canvas;
       if (target) {
+        // Notify server immediately that this canvas is being looked at
+        postState(target, true);
+
         let imageData = null;
         if (canvas === "centerLeft" && images[1]) {
           imageData = images[1];
@@ -70,9 +82,6 @@ export default function GazeRaycaster({ ws, images }) {
         }
 
         if (imageData) {
-          // Notify server that this canvas is being looked at
-          postState(target, true);
-
           const sendBytes = (ledArr) => {
             const canvasId = canvas;
             const ledBytes = new Uint8Array(ledArr); // 900*3 bytes

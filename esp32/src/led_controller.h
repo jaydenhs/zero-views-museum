@@ -26,3 +26,6 @@ void led_update_fade();
 // Expected byte length for a full frame
 size_t led_expected_bytes();
 
+// True while any fade animation (in or out) is running
+bool led_is_animating();
+

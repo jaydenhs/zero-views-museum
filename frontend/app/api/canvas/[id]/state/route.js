@@ -28,6 +28,7 @@ export async function POST(req, context) {
 
   const next = {};
   if (typeof body.lookedAt === "boolean") next.lookedAt = body.lookedAt;
+  if (typeof body.ts === "number") next.ts = body.ts;
 
   const updated = setCanvasState(id, next);
   return NextResponse.json(toResponse(updated), { status: 200 });

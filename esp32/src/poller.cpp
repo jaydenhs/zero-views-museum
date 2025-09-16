@@ -4,7 +4,7 @@
 #include <ArduinoJson.h>
 #include "led_controller.h"
 
-static const unsigned long POLL_INTERVAL_MS = 500;
+static const unsigned long POLL_INTERVAL_MS = 250; // polling cadence
 static unsigned long lastPollMs = 0;
 static bool lastLookedAt = false;
 
@@ -15,12 +15,14 @@ static bool fetchState(bool &lookedAt) {
   String url = String(API_BASE_URL) + "/api/canvas/" + CANVAS_ID + "/state";
   if (!https.begin(client, url)) return false;
   int code = https.GET();
+  Serial.println("code: " + String(code));
   if (code != HTTP_CODE_OK) { https.end(); return false; }
   String payload = https.getString();
   https.end();
   StaticJsonDocument<128> doc;
   if (deserializeJson(doc, payload)) return false;
   lookedAt = doc["lookedAt"] | false;
+  Serial.println("lookedAt: " + String(lookedAt));
   return true;
 }
 
@@ -59,16 +61,26 @@ void poller_tick() {
   if (now - lastPollMs < POLL_INTERVAL_MS) return;
   lastPollMs = now;
 
+  Serial.print("[");
+  Serial.print(now);
+  Serial.println(" ms] poller tick");
+
   bool lookedAt = false;
   if (!fetchState(lookedAt)) return;
 
   if (lookedAt && !lastLookedAt) {
+    Serial.print("[");
+    Serial.print(now);
+    Serial.println(" ms] lookedAt changed: false -> true");
     size_t expected = led_expected_bytes();
     static uint8_t buffer[900 * 3]; // matches NUM_LEDS*3
     if (expected <= sizeof(buffer) && fetchImageBytes(buffer, expected)) {
       led_apply_bytes(buffer, expected);
     }
   } else if (!lookedAt && lastLookedAt) {
+    Serial.print("[");
+    Serial.print(now);
+    Serial.println(" ms] lookedAt changed: true -> false");
     led_fade_out_or_clear();
   }
 
