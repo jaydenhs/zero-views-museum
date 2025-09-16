@@ -3,19 +3,21 @@ import "./globals.css";
 export const metadata = {
   title: "VR Museum - Zero Views",
   description: "A virtual reality museum experience showcasing unseen artworks",
-  viewport: "width=device-width, initial-scale=1.0, user-scalable=no",
   robots: "noindex, nofollow",
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  userScalable: "no",
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <head>
-        {/* VR/Quest 2 specific meta tags */}
-        <meta
-          name="viewport"
-          content="width=device-width, initial-scale=1.0, user-scalable=no, shrink-to-fit=no"
-        />
+        {/* VR/Quest 2 specific meta tags (viewport handled by export const viewport) */}
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta

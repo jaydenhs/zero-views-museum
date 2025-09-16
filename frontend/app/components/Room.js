@@ -1,11 +1,36 @@
 import { useLoader } from "@react-three/fiber";
+import { useMemo } from "react";
 import * as THREE from "three";
 import Photo from "./Photo";
 
 export default function Room({ images }) {
-  const floorTexture = useLoader(THREE.TextureLoader, "/wood-floor.jpg");
+  const floorSrc = useMemo(() => {
+    // Pick best supported compressed texture (AVIF > WebP > JPG)
+    if (typeof document !== "undefined") {
+      const canvas = document.createElement("canvas");
+      try {
+        const avif = canvas.toDataURL("image/avif");
+        if (avif && avif.indexOf("data:image/avif") === 0)
+          return "/wood-floor.avif";
+      } catch {}
+      try {
+        const webp = canvas.toDataURL("image/webp");
+        if (webp && webp.indexOf("data:image/webp") === 0)
+          return "/wood-floor.webp";
+      } catch {}
+    }
+    return "/wood-floor.jpg";
+  }, []);
+
+  console.log("Using floor texture:", floorSrc);
+
+  const floorTexture = useLoader(THREE.TextureLoader, floorSrc);
   floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping;
   floorTexture.repeat.set(4, 4);
+  floorTexture.colorSpace = THREE.SRGBColorSpace;
+  floorTexture.anisotropy = 8;
+  floorTexture.generateMipmaps = true;
+  floorTexture.minFilter = THREE.LinearMipmapLinearFilter;
 
   // Room dimensions: width (x) = 8, depth (z) = 4, height (y) = 4
   const roomWidth = 8;
