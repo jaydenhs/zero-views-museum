@@ -5,8 +5,8 @@ import {
   deleteImageBytes,
 } from "@/app/lib/imageBytesStore";
 
-export async function GET(_req, { params }) {
-  const id = params?.id;
+export async function GET(_req, context) {
+  const { id } = await context.params;
   if (!id)
     return NextResponse.json({ error: "Missing canvas id" }, { status: 400 });
   const bytes = getImageBytes(id);
@@ -21,8 +21,8 @@ export async function GET(_req, { params }) {
   });
 }
 
-export async function POST(req, { params }) {
-  const id = params?.id;
+export async function POST(req, context) {
+  const { id } = await context.params;
   if (!id)
     return NextResponse.json({ error: "Missing canvas id" }, { status: 400 });
   const buf = await req.arrayBuffer();
@@ -34,8 +34,8 @@ export async function POST(req, { params }) {
   );
 }
 
-export async function DELETE(_req, { params }) {
-  const id = params?.id;
+export async function DELETE(_req, context) {
+  const { id } = await context.params;
   if (!id)
     return NextResponse.json({ error: "Missing canvas id" }, { status: 400 });
   deleteImageBytes(id);

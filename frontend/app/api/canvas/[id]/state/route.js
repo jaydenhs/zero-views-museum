@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getCanvasState, setCanvasState, toResponse } from "@/app/lib/state";
 
-export async function GET(_req, { params }) {
-  const id = params?.id;
+export async function GET(_req, context) {
+  const { id } = await context.params;
   if (!id) {
     return NextResponse.json({ error: "Missing canvas id" }, { status: 400 });
   }
@@ -14,8 +14,8 @@ export async function GET(_req, { params }) {
   });
 }
 
-export async function POST(req, { params }) {
-  const id = params?.id;
+export async function POST(req, context) {
+  const { id } = await context.params;
   if (!id) {
     return NextResponse.json({ error: "Missing canvas id" }, { status: 400 });
   }
