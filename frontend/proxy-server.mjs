@@ -48,7 +48,7 @@ const server = https.createServer(options, app);
 
 const DEVICE_URLS = {
   // left: "ws://10.10.10.105:81",
-  centerLeft: "ws://10.10.10.106:81",
+  // centerLeft: "ws://10.10.10.106:81",
   // centerRight: "ws://10.10.10.107:81",
   // right: "ws://10.10.10.108:81",
 };

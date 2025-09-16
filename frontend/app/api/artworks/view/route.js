@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import https from "https";
 
-const FLASK_SERVER_URL = "https://10.10.10.111:5001";
+const FLASK_SERVER_URL = "https://zvm.jaydenh.com:5001";
 
 // Create HTTPS agent that ignores SSL certificate errors
 const httpsAgent = new https.Agent({
   rejectUnauthorized: false,
+  checkServerIdentity: () => null,
 });
 
 export async function POST(request) {

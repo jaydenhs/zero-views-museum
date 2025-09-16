@@ -40,9 +40,49 @@ const testHttpsConnection = async () => {
   }
 };
 
+// Function to check WebXR support and features
+const checkWebXRSupport = async () => {
+  try {
+    if (!navigator.xr) {
+      console.error("WebXR is not supported in this browser");
+      return { supported: false, reason: "WebXR not available" };
+    }
+
+    const immersiveVrSupported = await navigator.xr.isSessionSupported(
+      "immersive-vr"
+    );
+    if (!immersiveVrSupported) {
+      console.error("Immersive VR is not supported");
+      return { supported: false, reason: "Immersive VR not supported" };
+    }
+
+    // Check for dom-overlay support (optional)
+    const domOverlaySupported = await navigator.xr.isSessionSupported(
+      "immersive-vr",
+      {
+        optionalFeatures: ["dom-overlay"],
+      }
+    );
+
+    console.log("WebXR Support Check:");
+    console.log("- Immersive VR:", immersiveVrSupported);
+    console.log("- DOM Overlay:", domOverlaySupported);
+
+    return {
+      supported: true,
+      immersiveVr: immersiveVrSupported,
+      domOverlay: domOverlaySupported,
+    };
+  } catch (error) {
+    console.error("Error checking WebXR support:", error);
+    return { supported: false, reason: error.message };
+  }
+};
+
 // Global console log capture - starts immediately when page loads
 const globalLogs = [];
 const maxLogs = 100;
+let logIdCounter = 0;
 
 const addGlobalLog = (level, args) => {
   const timestamp = new Date().toLocaleTimeString();
@@ -53,7 +93,7 @@ const addGlobalLog = (level, args) => {
     .join(" ");
 
   const newLog = {
-    id: Date.now() + Math.random(),
+    id: ++logIdCounter,
     timestamp,
     level,
     message,
@@ -249,6 +289,12 @@ const xrStore = createXRStore({
   emulate: {
     inject: true,
   },
+  // Configure WebXR session to avoid dom-overlay issues on Quest 2
+  sessionInit: {
+    optionalFeatures: [],
+    requiredFeatures: [],
+    // Explicitly avoid requesting dom-overlay which is not supported in immersive-vr mode on Quest 2
+  },
 });
 
 // Initialize Supabase client (only used in online mode)
@@ -371,7 +417,7 @@ export default function VRView() {
   const [error, setError] = useState(null);
   const [chunkError, setChunkError] = useState(null);
   const [debugConsoleVisible, setDebugConsoleVisible] = useState(true);
-  const [debugLogs, setDebugLogs] = useState(globalLogs);
+  const [debugLogs, setDebugLogs] = useState([]);
   const ws = useRef(null);
 
   // Listen for new console logs
@@ -380,12 +426,13 @@ export default function VRView() {
       setDebugLogs([...globalLogs]);
     };
 
+    // Only run on client side
     if (typeof window !== "undefined") {
-      console.log("Window is undefined");
+      // Load existing logs after hydration
+      setDebugLogs([...globalLogs]);
+
       window.addEventListener("newConsoleLog", handleNewLog);
       return () => window.removeEventListener("newConsoleLog", handleNewLog);
-    } else {
-      console.log("Window is defined");
     }
   }, []);
 
@@ -448,7 +495,7 @@ export default function VRView() {
       }
     };
 
-    connectWebSocket();
+    // connectWebSocket();
 
     return () => {
       if (reconnectTimeout) {
@@ -594,6 +641,14 @@ export default function VRView() {
       console.log("Initializing VR Museum App...");
       console.log(`Target API URL: /api (proxied to Flask server)`);
 
+      // Check WebXR support first
+      const webxrSupport = await checkWebXRSupport();
+      if (!webxrSupport.supported) {
+        setError(`WebXR not supported: ${webxrSupport.reason}`);
+        setLoading(false);
+        return;
+      }
+
       if (OFFLINE_MODE) {
         const isHttpsWorking = await testHttpsConnection();
         if (!isHttpsWorking) {
@@ -706,7 +761,26 @@ export default function VRView() {
           }}
         >
           <button
-            onClick={() => xrStore.enterVR()}
+            onClick={async () => {
+              try {
+                console.log("Attempting to enter VR...");
+                await xrStore.enterVR();
+                console.log("Successfully entered VR");
+              } catch (error) {
+                console.error("Failed to enter VR:", error);
+                if (error.name === "NotSupportedError") {
+                  setError(
+                    "VR session not supported. This may be due to dom-overlay feature incompatibility with your headset."
+                  );
+                } else if (error.name === "SecurityError") {
+                  setError(
+                    "VR access denied. Please ensure you're using HTTPS and grant permission when prompted."
+                  );
+                } else {
+                  setError(`VR Error: ${error.message}`);
+                }
+              }
+            }}
             style={{
               fontSize: "20px",
               background: "blue",

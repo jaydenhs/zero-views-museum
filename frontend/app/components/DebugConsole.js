@@ -17,6 +17,21 @@ export default function DebugConsole({
   const [activeTab, setActiveTab] = useState("Console");
   const [wsStatus, setWsStatus] = useState("Disconnected");
   const [wsMessages, setWsMessages] = useState([]);
+  const [currentTime, setCurrentTime] = useState("");
+
+  // Update time periodically
+  useEffect(() => {
+    const updateTime = () => {
+      setCurrentTime(new Date().toLocaleString());
+    };
+
+    // Set initial time
+    updateTime();
+
+    // Update every second
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Monitor WebSocket status
   useEffect(() => {
@@ -52,7 +67,7 @@ export default function DebugConsole({
       setWsMessages((prev) =>
         [
           {
-            id: Date.now(),
+            id: prev.length + 1,
             timestamp,
             data: event.data,
             type: typeof event.data,
@@ -210,7 +225,7 @@ export default function DebugConsole({
               <strong>WebSocket:</strong> {wsStatus}
             </div>
             <div>
-              <strong>Timestamp:</strong> {new Date().toLocaleString()}
+              <strong>Timestamp:</strong> {currentTime}
             </div>
 
             {/* Test API Button */}

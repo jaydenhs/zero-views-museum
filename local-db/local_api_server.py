@@ -23,11 +23,11 @@ CORS(app, origins="*",
 DB_PATH = "artworks.db"
 IMAGES_DIR = "images"
 # HOST = "169.254.155.87"
-HOST = "0.0.0.0" 
+HOST = "10.10.10.126" 
 # HOST = "172.20.10.13"
 PORT = 5001 
-CERT_PATH = "../certificates/vr-museum.pem"
-KEY_PATH = "../certificates/vr-museum-key.pem"
+CERT_PATH = "../certs/zvm.jaydenh.com.crt"
+KEY_PATH = "../certs/zvm.jaydenh.com.key"
 
 def get_db_connection():
     """Get database connection."""

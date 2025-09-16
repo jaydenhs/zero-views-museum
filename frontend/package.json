@@ -3,25 +3,23 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "NODE_TLS_REJECT_UNAUTHORIZED=0 next dev --experimental-https --experimental-https-key ../certificates/vr-museum-key.pem --experimental-https-cert ../certificates/vr-museum.pem",
-    "dev:turbo": "next dev --turbopack --experimental-https --experimental-https-key ../certificates/vr-museum-key.pem --experimental-https-cert ../certificates/vr-museum.pem",
-    "dev:http": "next dev",
+    "dev": "NODE_EXTRA_CA_CERTS=../certs/local-ca.crt next dev --experimental-https --experimental-https-key ../certs/zvm.jaydenh.com.key --experimental-https-cert ../certs/zvm.jaydenh.com.crt",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 3000",
     "lint": "next lint"
   },
   "dependencies": {
     "@react-three/drei": "^10.0.4",
     "@react-three/fiber": "^9.1.0",
-    "@react-three/xr": "^6.6.9",
+    "@react-three/xr": "^6.6.26",
     "@supabase/supabase-js": "^2.49.1",
     "express": "^5.1.0",
     "http-proxy-middleware": "^3.0.5",
-    "ws": "^8.18.0",
     "next": "^15.2.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "three": "^0.174.0"
+    "three": "^0.174.0",
+    "ws": "^8.18.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
