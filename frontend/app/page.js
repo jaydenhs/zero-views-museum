@@ -134,6 +134,20 @@ export default function VRView() {
           >
             Enter VR
           </button>
+          <button
+            onClick={() => fetchImages()}
+            style={{
+              fontSize: "20px",
+              background: "green",
+              padding: "1rem",
+              border: "none",
+              borderRadius: "5px",
+              color: "white",
+              cursor: "pointer",
+            }}
+          >
+            Fetch Images
+          </button>
         </div>
       </div>
     </>

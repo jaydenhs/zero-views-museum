@@ -52,7 +52,7 @@ export default function GazeRaycaster({ ws, images }) {
 
         if (imageData) {
           // Use smallest Flickr size for LED processing (bandwidth-friendly)
-          processImageForLEDStrip(toFlickrSize(imageData.url, "t"))
+          processImageForLEDStrip(toFlickrSize(imageData.url, "t")) // thumbnail size, high resolution is unnecessary for colour encoding
             .then((ledArray) => {
               const canvasId = canvas;
               const canvasBytes = new TextEncoder().encode(canvasId);

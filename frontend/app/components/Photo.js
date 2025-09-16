@@ -4,7 +4,7 @@ import { Text } from "@react-three/drei";
 import { toFlickrSize } from "../lib/flickr";
 
 export default function Photo({ image, position, canvas }) {
-  image.url = toFlickrSize(image.url, "t");
+  image.url = toFlickrSize(image.url, "b"); // 1024px, keep as largest because people will be looking at it up close
   const texture = useLoader(TextureLoader, image?.url || null);
 
   if (!image) {
