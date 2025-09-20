@@ -106,47 +106,23 @@ export default function Room({ images }) {
       >
         <mesh>
           <planeGeometry args={[roomWidth, roomHeight]} />
-          <meshStandardMaterial color="white" />
+          <meshStandardMaterial color="white" doubleSided />
         </mesh>
-        {/* Wall Text Description */}
-        <group position={[-wallTextWidth / 2, 0.2, 0.01]}>
-          <Text
-            font="/fonts/Libre_Franklin/static/LibreFranklin-Bold.ttf"
-            fontSize={0.2}
-            color="black"
-            anchorX="left"
-            anchorY="top"
-            textAlign="left"
-            maxWidth={wallTextWidth}
-          >
-            {`Zero Views Museum`}
-          </Text>
-          <Text
-            position={[0, -0.275, 0]}
-            font="/fonts/Libre_Franklin/static/LibreFranklin-Bold.ttf"
-            fontSize={0.07}
-            color="gray"
-            anchorX="left"
-            anchorY="top"
-            textAlign="left"
-            maxWidth={wallTextWidth}
-          >
-            {`Jayden Hsiao, Shaan Sawrup, Selina Ding, Aaron Dyck`}
-          </Text>
-          <Text
-            position={[0, -0.45, 0]}
-            font="/fonts/Libre_Franklin/static/LibreFranklin-Regular.ttf"
-            fontSize={0.07}
-            lineHeight={1.35}
-            color="black"
-            anchorX="left"
-            anchorY="top"
-            textAlign="left"
-            maxWidth={wallTextWidth}
-          >
-            {`Our consumption of digital art is increasingly mediated by recommendation systems that prioritize popularity; the more views an artwork has, the better it must be and the more it deserves to be shown.\n\nZero Views Museum responds to this context by employing counter functional design principles to create an immersive virtual reality experience that exclusively exhibits digital artworks with zero views. Once viewed, works are permanently removed from the database, making participants both the first and potentially last person to see them.\n\nThis encounter invites reflection from participants: Are algorithms good judges of artistic worth? What unseen works have already been lost? And does our perception of art change when we know we can never see it again?`}
-          </Text>
-        </group>
+        {/* Two photos on the front wall */}
+        {images?.[3] && (
+          <Photo
+            position={[-1.5, -0.4, 0]}
+            image={images[3]}
+            canvas="centerLeft"
+          />
+        )}
+        {images?.[4] && (
+          <Photo
+            position={[1.5, -0.4, 0]}
+            image={images[4]}
+            canvas="centerRight"
+          />
+        )}
       </group>
 
       {/* Left Wall (short) */}
@@ -159,7 +135,7 @@ export default function Room({ images }) {
           <meshStandardMaterial color="white" />
         </mesh>
         {images?.[0] && (
-          <Photo position={[0, -0.4, 0]} image={images[0]} canvas="left" />
+          <Photo position={[0, -0.4, 0]} image={images[5]} canvas="left" />
         )}
       </group>
 
@@ -172,8 +148,8 @@ export default function Room({ images }) {
           <planeGeometry args={[roomDepth, roomHeight]} />
           <meshStandardMaterial color="white" />
         </mesh>
-        {images?.[3] && (
-          <Photo position={[0, -0.4, 0]} image={images[3]} canvas="right" />
+        {images?.[5] && (
+          <Photo position={[0, -0.4, 0]} image={images[0]} canvas="right" />
         )}
       </group>
     </group>

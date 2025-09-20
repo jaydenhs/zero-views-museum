@@ -37,7 +37,7 @@ export default function VRView() {
 
       const { data, error } = await supabase.rpc(
         "get_unviewed_flickr_images_cc",
-        { limit_count: 4 }
+        { limit_count: 6 }
       );
       if (error) throw error;
 
