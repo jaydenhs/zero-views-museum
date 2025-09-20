@@ -51,7 +51,7 @@ export default function VRView() {
           (img) =>
             new Promise(async (resolve) => {
               // Fetch high-res (b) once and create a blob URL
-              let displayUrl = toFlickrSize(img.url, "t");
+              let displayUrl = toFlickrSize(img.url, "b");
               try {
                 const resp = await fetch(displayUrl, { cache: "force-cache" });
                 const blob = await resp.blob();
