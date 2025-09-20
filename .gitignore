@@ -5,3 +5,4 @@ wifi-config.h
 images/
 certificates/
 .cursorignore
+node_modules/

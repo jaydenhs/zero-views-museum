@@ -1,0 +1,25 @@
+{
+  "name": "wifi-isolation-test",
+  "version": "1.0.0",
+  "description": "Test tool to check for Wi-Fi client isolation and WebSocket connectivity",
+  "main": "websocket-server.js",
+  "scripts": {
+    "start": "node websocket-server.js",
+    "dev": "nodemon websocket-server.js"
+  },
+  "keywords": [
+    "wifi",
+    "isolation",
+    "websocket",
+    "testing",
+    "network"
+  ],
+  "author": "Wi-Fi Isolation Tester",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.14.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}
